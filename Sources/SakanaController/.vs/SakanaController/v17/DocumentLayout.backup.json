@@ -1,0 +1,86 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "D:\\Projects\\pythonScripts\\SakanaController\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{74138C16-F11C-409B-9216-6DE545736008}|SakanaController.csproj|d:\\projects\\pythonscripts\\sakanacontroller\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "RelativeMoniker": "D:0:0:{74138C16-F11C-409B-9216-6DE545736008}|SakanaController.csproj|solutionrelative:form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{74138C16-F11C-409B-9216-6DE545736008}|SakanaController.csproj|d:\\projects\\pythonscripts\\sakanacontroller\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{74138C16-F11C-409B-9216-6DE545736008}|SakanaController.csproj|solutionrelative:form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{74138C16-F11C-409B-9216-6DE545736008}|SakanaController.csproj|d:\\projects\\pythonscripts\\sakanacontroller\\calibration.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{74138C16-F11C-409B-9216-6DE545736008}|SakanaController.csproj|solutionrelative:calibration.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{74138C16-F11C-409B-9216-6DE545736008}|SakanaController.csproj|d:\\projects\\pythonscripts\\sakanacontroller\\curve.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{74138C16-F11C-409B-9216-6DE545736008}|SakanaController.csproj|solutionrelative:curve.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 2,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "Calibration.cs",
+              "DocumentMoniker": "D:\\Projects\\pythonScripts\\SakanaController\\Calibration.cs",
+              "RelativeDocumentMoniker": "Calibration.cs",
+              "ToolTip": "D:\\Projects\\pythonScripts\\SakanaController\\Calibration.cs",
+              "RelativeToolTip": "Calibration.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABsAAAA9AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-12-26T18:04:10.194Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "Form1.cs",
+              "DocumentMoniker": "D:\\Projects\\pythonScripts\\SakanaController\\Form1.cs",
+              "RelativeDocumentMoniker": "Form1.cs",
+              "ToolTip": "D:\\Projects\\pythonScripts\\SakanaController\\Form1.cs",
+              "RelativeToolTip": "Form1.cs",
+              "ViewState": "AgIAAGoBAAAAAAAAAAAmwHoBAAAQAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-12-26T13:51:57.25Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Form1.cs [\u8BBE\u8BA1]",
+              "DocumentMoniker": "D:\\Projects\\pythonScripts\\SakanaController\\Form1.cs",
+              "RelativeDocumentMoniker": "Form1.cs",
+              "ToolTip": "D:\\Projects\\pythonScripts\\SakanaController\\Form1.cs [\u8BBE\u8BA1]",
+              "RelativeToolTip": "Form1.cs [\u8BBE\u8BA1]",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-12-26T09:41:04.836Z",
+              "EditorCaption": " [\u8BBE\u8BA1]"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "Curve.cs",
+              "DocumentMoniker": "D:\\Projects\\pythonScripts\\SakanaController\\Curve.cs",
+              "RelativeDocumentMoniker": "Curve.cs",
+              "ToolTip": "D:\\Projects\\pythonScripts\\SakanaController\\Curve.cs",
+              "RelativeToolTip": "Curve.cs",
+              "ViewState": "AgIAABQAAAAAAAAAAAAAAC4AAAAMAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-12-27T11:23:56.111Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
