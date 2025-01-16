@@ -222,7 +222,7 @@ Given that the vast majority of chemistry workers, like me, have not received sy
    
    Readers are highly encouraged to use the content introduced in this article for their own teaching and research. Those who cite this article must indicate the source. **Those who publish or develop secondary projects based on this project must cite the Github page. Commercial use without permission from the author is prohibited.**
    
-   *BSJ INSTRUMENT Bozhou Instrument*
+   *BSJ INSTRUMENT*
    
    January 15, 2025
    
@@ -428,7 +428,7 @@ SakanaController是针对Sakana的控制程序。在使用时，首先在Connect
 
 测试完成后，点击Save，可以保存到纯文本文件。
 
-除了CV测量外，软件还有恒电位仪模式。完成校准后，在Potentiostat处输入期望的电压，点击Start，仪器就会让WE相对于RE的电位等于设置数值，可用于电解实验。对于焊接到PCB上的仪器，**电压范围可达正负2.5 V，误差在30 mV以内（典型值10 mV）**。
+1. 除了CV测量外，软件还有恒电位仪模式。完成校准后，在Potentiostat处输入期望的电压，点击Start，仪器就会让WE相对于RE的电位等于设置数值，可用于电解实验。对于焊接到PCB上的仪器，**电压范围可达正负2.5 V，误差在30 mV以内（典型值10 mV）**。
 
 **8. 转移到PCB**  
 
