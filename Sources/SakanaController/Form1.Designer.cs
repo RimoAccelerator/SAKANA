@@ -28,9 +28,9 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.Windows.Forms.DataVisualization.Charting.ChartArea chartArea1 = new System.Windows.Forms.DataVisualization.Charting.ChartArea();
-            System.Windows.Forms.DataVisualization.Charting.Legend legend1 = new System.Windows.Forms.DataVisualization.Charting.Legend();
-            System.Windows.Forms.DataVisualization.Charting.Series series1 = new System.Windows.Forms.DataVisualization.Charting.Series();
+            System.Windows.Forms.DataVisualization.Charting.ChartArea chartArea2 = new System.Windows.Forms.DataVisualization.Charting.ChartArea();
+            System.Windows.Forms.DataVisualization.Charting.Legend legend2 = new System.Windows.Forms.DataVisualization.Charting.Legend();
+            System.Windows.Forms.DataVisualization.Charting.Series series2 = new System.Windows.Forms.DataVisualization.Charting.Series();
             chartMain = new System.Windows.Forms.DataVisualization.Charting.Chart();
             txtStartE = new TextBox();
             txtEndE = new TextBox();
@@ -62,6 +62,8 @@
             saveFileDialog = new SaveFileDialog();
             label6 = new Label();
             groupBox1 = new GroupBox();
+            btnStopIT = new Button();
+            btnSaveIT = new Button();
             ((System.ComponentModel.ISupportInitialize)chartMain).BeginInit();
             grpCalibration.SuspendLayout();
             statusStrip.SuspendLayout();
@@ -72,18 +74,18 @@
             // 
             // chartMain
             // 
-            chartArea1.Name = "ChartArea1";
-            chartMain.ChartAreas.Add(chartArea1);
-            legend1.Name = "Legend1";
-            chartMain.Legends.Add(legend1);
+            chartArea2.Name = "ChartArea1";
+            chartMain.ChartAreas.Add(chartArea2);
+            legend2.Name = "Legend1";
+            chartMain.Legends.Add(legend2);
             chartMain.Location = new Point(23, 90);
             chartMain.Margin = new Padding(2);
             chartMain.Name = "chartMain";
-            series1.ChartArea = "ChartArea1";
-            series1.Legend = "Legend1";
-            series1.Name = "Series1";
-            chartMain.Series.Add(series1);
-            chartMain.Size = new Size(1080, 549);
+            series2.ChartArea = "ChartArea1";
+            series2.Legend = "Legend1";
+            series2.Name = "Series1";
+            chartMain.Series.Add(series2);
+            chartMain.Size = new Size(1169, 549);
             chartMain.TabIndex = 0;
             chartMain.Text = "chart1";
             // 
@@ -329,7 +331,7 @@
             // 
             // btnSetVolt
             // 
-            btnSetVolt.Location = new Point(124, 49);
+            btnSetVolt.Location = new Point(9, 50);
             btnSetVolt.Name = "btnSetVolt";
             btnSetVolt.Size = new Size(70, 23);
             btnSetVolt.TabIndex = 13;
@@ -371,15 +373,37 @@
             // 
             // groupBox1
             // 
+            groupBox1.Controls.Add(btnSaveIT);
+            groupBox1.Controls.Add(btnStopIT);
             groupBox1.Controls.Add(btnSetVolt);
             groupBox1.Controls.Add(label6);
             groupBox1.Controls.Add(txtVolt);
             groupBox1.Location = new Point(961, 3);
             groupBox1.Name = "groupBox1";
-            groupBox1.Size = new Size(200, 78);
+            groupBox1.Size = new Size(236, 78);
             groupBox1.TabIndex = 21;
             groupBox1.TabStop = false;
             groupBox1.Text = "Potentiostat";
+            // 
+            // btnStopIT
+            // 
+            btnStopIT.Location = new Point(85, 51);
+            btnStopIT.Name = "btnStopIT";
+            btnStopIT.Size = new Size(70, 23);
+            btnStopIT.TabIndex = 15;
+            btnStopIT.Text = "Stop";
+            btnStopIT.UseVisualStyleBackColor = true;
+            btnStopIT.Click += btnStopIT_Click;
+            // 
+            // btnSaveIT
+            // 
+            btnSaveIT.Location = new Point(161, 51);
+            btnSaveIT.Name = "btnSaveIT";
+            btnSaveIT.Size = new Size(70, 23);
+            btnSaveIT.TabIndex = 16;
+            btnSaveIT.Text = "Save";
+            btnSaveIT.UseVisualStyleBackColor = true;
+            btnSaveIT.Click += btnSaveIT_Click;
             // 
             // SakanaController
             // 
@@ -443,5 +467,7 @@
         private TextBox txtVolt;
         private Label label6;
         private GroupBox groupBox1;
+        private Button btnStopIT;
+        private Button btnSaveIT;
     }
 }

@@ -10,9 +10,13 @@ namespace SakanaController
     {
         private SerialPort serialPort;
         private Calibration calibration = new Calibration();
-        private Curve curve = new Curve();
+        private Curve curveCV = new Curve();
+        private Curve curveIT = new Curve();
         private bool isCalibration = false;
         private bool isMeasurement = false;
+        private bool isIT = false;
+        private DateTime startTimeForIT; // 新增变量
+
         public SakanaController()
         {
             InitializeComponent();
@@ -36,8 +40,16 @@ namespace SakanaController
                 BorderWidth = 5,
                 Color = System.Drawing.ColorTranslator.FromHtml("#fcb441")
             };
+            var dataIT = new Series
+            {
+                Name = "data_I_T",
+                ChartType = SeriesChartType.Line,
+                BorderWidth = 5,
+                Color = System.Drawing.ColorTranslator.FromHtml("#ffa241")
+            };
             chartMain.Series.Add(dataCalibration);
             chartMain.Series.Add(dataMeasurement);
+            chartMain.Series.Add(dataIT);
             chartMain.ChartAreas[0].AxisX.TitleFont = new System.Drawing.Font("Arial", 12, System.Drawing.FontStyle.Bold);
             chartMain.ChartAreas[0].AxisY.TitleFont = new System.Drawing.Font("Arial", 12, System.Drawing.FontStyle.Bold);
         }
@@ -167,6 +179,13 @@ namespace SakanaController
                             ProcessReceivedDataForMeasurement(response);
                         }
                     }
+                    if (isIT)
+                    {
+                        foreach (string response in ExtractBuffer(data))
+                        {
+                            ProcessReceivedDataForIT(response);
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -221,7 +240,22 @@ namespace SakanaController
             string[] parts = data.Split(' ');
             double x = double.Parse(parts[0]);
             double y = double.Parse(parts[1]);
-            var smoothedPoint = curve.SmoothDataPoint(x, y);
+            var smoothedPoint = curveCV.SmoothDataPoint(x, y);
+            chartMain.Series["dataMeasurement"].Points.AddXY(smoothedPoint.x, smoothedPoint.y);
+        }
+
+        private void ProcessReceivedDataForIT(string data)
+        {
+            data = data.Trim();
+            if (data == "fini")
+            {
+                isIT = false;
+                lblMeasurement.Text = "";
+                return;
+            }
+            double y = double.Parse(data);
+            double x = (DateTime.Now - startTimeForIT).TotalMilliseconds / 1000;
+            var smoothedPoint = curveIT.SmoothDataPoint(x, y);
             chartMain.Series["dataMeasurement"].Points.AddXY(smoothedPoint.x, smoothedPoint.y);
         }
 
@@ -271,7 +305,7 @@ namespace SakanaController
         {
             if (isCalibration)
             {
-                MessageBox.Show("Logics failed: it is calibrating now.");
+                MessageBox.Show("Error: it is calibrating now.");
                 return;
             }
             if (!double.TryParse(txtStartE.Text, out double startE) ||
@@ -281,11 +315,11 @@ namespace SakanaController
                 MessageBox.Show("Input parameters invalid.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
-            curve.StartE = startE;
-            curve.EndE = endE;
-            curve.ScanRate = scanRate;
+            curveCV.StartE = startE;
+            curveCV.EndE = endE;
+            curveCV.ScanRate = scanRate;
 
-            if (!checkVolt(curve.StartE) || !checkVolt(curve.EndE))
+            if (!checkVolt(curveCV.StartE) || !checkVolt(curveCV.EndE))
             {
                 MessageBox.Show("Voltage out of range. I will not proceed.");
                 return;
@@ -299,10 +333,10 @@ namespace SakanaController
                 btnStop.Enabled = true;
                 btnSave.Enabled = false;
                 isMeasurement = true;
-                chartMain.ChartAreas[0].AxisX.Title = "-E (V)";
-                chartMain.ChartAreas[0].AxisY.Title = "-I (uA)";
+                chartMain.ChartAreas[0].AxisX.Title = "E (V)";
+                chartMain.ChartAreas[0].AxisY.Title = "I (uA)";
                 ClearChart();
-                curve.Clear();
+                curveCV.Clear();
                 lblMeasurement.Text = "Recording";
                 lblSave.Text = "NOT SAVED";
             }
@@ -355,7 +389,7 @@ namespace SakanaController
                     string filePath = saveFileDialog.FileName;
                     try
                     {
-                        curve.Save(filePath);
+                        curveCV.Save(filePath);
                         lblSave.Text = "SAVED";
                         MessageBox.Show("Data saved successfully.", "Save", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
@@ -369,7 +403,7 @@ namespace SakanaController
 
         private void btnSetVolt_Click(object sender, EventArgs e)
         {
-            if(!double.TryParse(txtVolt.Text, out double Vset))
+            if (!double.TryParse(txtVolt.Text, out double Vset))
             {
                 MessageBox.Show("Voltage invalid.");
                 return;
@@ -377,12 +411,30 @@ namespace SakanaController
             if (!checkVolt(Vset))
                 MessageBox.Show("Voltage out of range. I will not proceed.");
             else
-                serialPort.Write("set " + txtVolt.Text);
+            {
+                try
+                {
+                    chartMain.ChartAreas[0].AxisX.Title = "t (s)";
+                    chartMain.ChartAreas[0].AxisY.Title = "I (uA)";
+                    ClearChart();
+                    curveIT.Clear();
+                    curveIT.StartE = Vset;
+                    curveIT.EndE = Vset;
+                    serialPort.Write("set " + txtVolt.Text);
+                    isIT = true;
+                    startTimeForIT = DateTime.Now; // 更新 startTimeForIT
+                }
+                catch
+                {
+                    MessageBox.Show("Failed to communicate.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+
         }
 
         private bool checkVolt(double v)
         {
-            if(this.calibration.Slope == 0)
+            if (this.calibration.Slope == 0)
                 return false;
             else
             {
@@ -391,6 +443,44 @@ namespace SakanaController
                     return false;
                 else
                     return true;
+            }
+        }
+
+        private void btnStopIT_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                serialPort.Write("stopit");
+                isIT = false;
+            }
+            catch
+            {
+                MessageBox.Show("Failed to communicate.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void btnSaveIT_Click(object sender, EventArgs e)
+        {
+            using (SaveFileDialog saveFileDialog = new SaveFileDialog())
+            {
+                saveFileDialog.Filter = "Text Files (*.txt)|*.txt|All Files (*.*)|*.*";
+                saveFileDialog.DefaultExt = "txt";
+                saveFileDialog.AddExtension = true;
+                saveFileDialog.Title = "Save Data";
+
+                if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    string filePath = saveFileDialog.FileName;
+                    try
+                    {
+                        curveIT.Save(filePath);
+                        MessageBox.Show("Data saved successfully.", "Save", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Failed to save data: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
             }
         }
     }
