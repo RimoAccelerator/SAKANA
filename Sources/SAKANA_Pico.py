@@ -606,6 +606,7 @@ IS_CALIBRATION = False
 IS_MEASUREMENT = False
 CAL_SLOPE = -1.28
 CAL_INTERCEPT = 2.29
+IS_I_T = False
 
 # Initialize I2C and sensors
 i2c = I2C(i2c_channel, scl=Pin(scl_pin), sda=Pin(sda_pin))
@@ -645,10 +646,12 @@ def handle_uart_commands(buf):
     global this_duty, num_cycle, count, IS_CALIBRATION, IS_MEASUREMENT
     global v_incre, v_start, v_end, scan_rate, N, ticktime
     global CAL_SLOPE, CAL_INTERCEPT
+    global IS_I_T
     if buf == 'cali':
         print('cali received')
         IS_CALIBRATION = True
         IS_MEASUREMENT = False
+        IS_I_T = False
         v_start = 1.5
         v_end = 0.5
         ticktime = v_incre * 1000 / scan_rate
@@ -666,12 +669,16 @@ def handle_uart_commands(buf):
     elif buf == 'stopmeas':
         print('measurement stopped')
         IS_MEASUREMENT = False
+    elif buf == 'stopit':
+        print('i_t stopped')
+        IS_I_T = False
     elif 'par ' in buf:
         print(buf)
         CAL_SLOPE, CAL_INTERCEPT = [float(i) for i in buf.split(' ')[1:]]
     elif 'meas' in buf:
         IS_MEASUREMENT = True
         IS_CALIBRATION = False
+        IS_I_T = False
         v_start, v_end, scan_rate = [float(i) for i in buf.split(' ')[1:]]
         v_incre = - scan_rate * 0.000025 # if v_incre is too small, the scan rate will be significantly lower than expected
         v_start = -v_start
@@ -689,6 +696,7 @@ def handle_uart_commands(buf):
         print(f'set volt to {volt}')
         v_samp_switch.value(0)
         i_samp_switch.value(1)
+        IS_I_T = True
         writeVoltage(-float(volt))
     elif 'range' in buf:
         _, range = buf.split(' ')
@@ -708,12 +716,19 @@ def handle_uart_commands(buf):
             resistor = 680000
             print('set range to 680k')
 
+def read_i():
+    i = (ina.current() - 0.005) / (resistor / 1011.6) * 1000
+    correction_slope = 1.0
+    correction_intercept = 0.0
+    return (i - correction_intercept) / correction_slope
+
 def main_loop():
     global this_duty, num_cycle, count, IS_CALIBRATION, IS_MEASUREMENT
     global v_incre, v_start, v_end, scan_rate, N, ticktime
     global CAL_SLOPE, CAL_INTERCEPT
     temp = []
     temp_v = []
+    temp_it = []
     count = 0
 
     writeVoltage(this_duty)
@@ -723,10 +738,20 @@ def main_loop():
             handle_uart_commands(buf)
             continue
 
-        if not (IS_CALIBRATION or IS_MEASUREMENT):
+        if not (IS_CALIBRATION or IS_MEASUREMENT or IS_I_T):
             utime.sleep(0.001)
             continue
 
+        if IS_I_T:
+            i = read_i()
+            temp_it.append(i)
+            if len(temp_it) > N:
+                i_avg = sum(temp_it) / N
+                temp_it = []
+                uart.write(f'${i_avg:.4f}%') 
+            utime.sleep(0.002)
+
+            continue
         
         #utime.sleep_us()
         utime.sleep_us(int(ticktime / N * 1000000))
@@ -760,7 +785,7 @@ def main_loop():
             v_act = ads_read()
             temp_v.append(v_act)
         elif IS_MEASUREMENT:
-            i = (ina.current() - 0.005) / (resistor / 1011.6) * 1000
+            i = read_i()
             temp.append(i)
 
         this_duty += v_incre / N
