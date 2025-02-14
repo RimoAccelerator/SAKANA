@@ -640,10 +640,10 @@ def writeVoltage(v_out):
 def ads_read():
     value = ads.raw_to_v(ads.read_rev())
     #return value
-    return value * 0.9198 - 0.0286 # fitted calibration function
+    return value * 0.9284 - 0.0228 # fitted calibration function
 
 def handle_uart_commands(buf):
-    global this_duty, num_cycle, count, IS_CALIBRATION, IS_MEASUREMENT
+    global this_duty, num_cycle, count, IS_CALIBRATION, IS_MEASUREMENT, resistor
     global v_incre, v_start, v_end, scan_rate, N, ticktime
     global CAL_SLOPE, CAL_INTERCEPT
     global IS_I_T
@@ -717,10 +717,10 @@ def handle_uart_commands(buf):
             print('set range to 680k')
 
 def read_i():
-    i = (ina.current() - 0.005) / (resistor / 1011.6) * 1000
-    correction_slope = 1.0
-    correction_intercept = 0.0
-    return (i - correction_intercept) / correction_slope
+    i = (ina.current()) / (resistor / 1011.6) * 1000
+    correction_slope = 1.0846
+    correction_intercept = 0.2836
+    return (i - correction_intercept) / correction_slope # fitted calibration function for INA219
 
 def main_loop():
     global this_duty, num_cycle, count, IS_CALIBRATION, IS_MEASUREMENT
