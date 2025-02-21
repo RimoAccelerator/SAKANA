@@ -604,9 +604,10 @@ range_2_switch.value(1)
 # Calibration and measurement settings
 IS_CALIBRATION = False
 IS_MEASUREMENT = False
-CAL_SLOPE = -1.28
-CAL_INTERCEPT = 2.29
+CAL_SLOPE = -1.080
+CAL_INTERCEPT = 2.711
 IS_I_T = False
+MAX_CYCLE = 0.5 # number of CV cycles * 0.5; 0 for LSV
 
 # Initialize I2C and sensors
 i2c = I2C(i2c_channel, scl=Pin(scl_pin), sda=Pin(sda_pin))
@@ -640,12 +641,13 @@ def writeVoltage(v_out):
 def ads_read():
     value = ads.raw_to_v(ads.read_rev())
     #return value
-    return value * 0.9284 - 0.0228 # fitted calibration function
+    #return value * 0.9284 - 0.0228 # fitted calibration function
+    return value * 0.9125 - 0.0115
 
 def handle_uart_commands(buf):
     global this_duty, num_cycle, count, IS_CALIBRATION, IS_MEASUREMENT, resistor
     global v_incre, v_start, v_end, scan_rate, N, ticktime
-    global CAL_SLOPE, CAL_INTERCEPT
+    global CAL_SLOPE, CAL_INTERCEPT, MAX_CYCLE
     global IS_I_T
     if buf == 'cali':
         print('cali received')
@@ -675,6 +677,9 @@ def handle_uart_commands(buf):
     elif 'par ' in buf:
         print(buf)
         CAL_SLOPE, CAL_INTERCEPT = [float(i) for i in buf.split(' ')[1:]]
+    elif 'numcyc ' in buf:
+        print(buf)
+        MAX_CYCLE = float(buf.split(' ')[1]) * 0.5
     elif 'meas' in buf:
         IS_MEASUREMENT = True
         IS_CALIBRATION = False
@@ -683,7 +688,11 @@ def handle_uart_commands(buf):
         v_incre = - scan_rate * 0.000025 # if v_incre is too small, the scan rate will be significantly lower than expected
         v_start = -v_start
         v_end = -v_end
+
         ticktime = v_incre * 1000 / scan_rate
+        if v_start < v_end:
+            v_incre = -v_incre #assume that v_incre is always negative. For negative direction, v_incre should be positive
+        
         this_duty = v_start
         num_cycle = 0
         writeVoltage(this_duty)
@@ -761,17 +770,26 @@ def main_loop():
         #else:
         #    v_samp_switch.value(0)
         #    i_samp_switch.value(1)
+        if v_start > v_end:
+            if this_duty < v_end:
+                this_duty = v_end
+                v_incre *= -1
+                num_cycle += 0.5
+            elif this_duty > v_start:
+                this_duty = v_start
+                v_incre *= -1
+                num_cycle += 0.5
+        else:
+            if this_duty > v_end:
+                this_duty = v_end
+                v_incre *= -1
+                num_cycle += 0.5
+            elif this_duty < v_start:
+                this_duty = v_start
+                v_incre *= -1
+                num_cycle += 0.5
 
-        if this_duty < v_end:
-            this_duty = v_end
-            v_incre *= -1
-            num_cycle += 0.5
-        elif this_duty > v_start:
-            this_duty = v_start
-            v_incre *= -1
-            num_cycle += 0.5
-
-        if num_cycle > 0.5:
+        if num_cycle > MAX_CYCLE:
             print('fini')
             utime.sleep(0.1)
             uart.write('$fini%')
