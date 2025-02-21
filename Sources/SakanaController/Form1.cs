@@ -332,6 +332,7 @@ namespace SakanaController
                 btnStart.Enabled = false;
                 btnStop.Enabled = true;
                 btnSave.Enabled = false;
+                btnSetVolt.Enabled = false;
                 isMeasurement = true;
                 chartMain.ChartAreas[0].AxisX.Title = "E (V)";
                 chartMain.ChartAreas[0].AxisY.Title = "I (uA)";
@@ -422,7 +423,9 @@ namespace SakanaController
                     curveIT.EndE = Vset;
                     serialPort.Write("set " + txtVolt.Text);
                     isIT = true;
-                    startTimeForIT = DateTime.Now; // ¸üÐÂ startTimeForIT
+                    startTimeForIT = DateTime.Now; // update startTimeForIT
+                    btnStopIT.Enabled = true;
+                    btnStart.Enabled = false;
                 }
                 catch
                 {
@@ -452,6 +455,8 @@ namespace SakanaController
             {
                 serialPort.Write("stopit");
                 isIT = false;
+                btnSetVolt.Enabled = true;
+                btnStart.Enabled = true;
             }
             catch
             {
@@ -483,5 +488,21 @@ namespace SakanaController
                 }
             }
         }
+
+        private void radioLSV_CheckedChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                if(radioLSV.Checked) 
+                    serialPort.Write("numcyc 0");
+                else
+                    serialPort.Write("numcyc 1");
+            }
+            catch
+            {
+                MessageBox.Show("Failed to communicate.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
     }
 }
