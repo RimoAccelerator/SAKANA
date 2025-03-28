@@ -235,6 +235,7 @@ namespace SakanaController
                 isMeasurement = false;
                 lblMeasurement.Text = "";
                 btnSave.Enabled = true;
+                btnSetVolt.Enabled = true;
                 return;
             }
             string[] parts = data.Split(' ');
@@ -310,7 +311,9 @@ namespace SakanaController
             }
             if (!double.TryParse(txtStartE.Text, out double startE) ||
                 !double.TryParse(txtEndE.Text, out double endE) ||
-                !double.TryParse(txtScanRate.Text, out double scanRate))
+                !double.TryParse(txtScanRate.Text, out double scanRate) ||
+                !int.TryParse(txtMaxCycle.Text, out int maxCycle)
+                )
             {
                 MessageBox.Show("Input parameters invalid.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
@@ -324,10 +327,12 @@ namespace SakanaController
                 MessageBox.Show("Voltage out of range. I will not proceed.");
                 return;
             }
-
+            
             string command = $"meas {startE:F3} {endE:F3} {scanRate:F3}";
             try
             {
+                serialPort.Write("numcyc " + maxCycle.ToString());
+                Thread.Sleep(10);
                 serialPort.Write(command);
                 btnStart.Enabled = false;
                 btnStop.Enabled = true;
@@ -356,6 +361,7 @@ namespace SakanaController
                 btnStart.Enabled = true;
                 btnStop.Enabled = false;
                 btnSave.Enabled = true;
+                btnSetVolt.Enabled = true;
                 lblMeasurement.Text = "";
             }
             catch
@@ -425,6 +431,7 @@ namespace SakanaController
                     isIT = true;
                     startTimeForIT = DateTime.Now; // update startTimeForIT
                     btnStopIT.Enabled = true;
+                    btnSetVolt.Enabled = false;
                     btnStart.Enabled = false;
                 }
                 catch
@@ -493,10 +500,19 @@ namespace SakanaController
         {
             try
             {
-                if(radioLSV.Checked) 
+                if(radioLSV.Checked)
+                {
                     serialPort.Write("numcyc 0");
+                    txtMaxCycle.Enabled = false;
+                    txtMaxCycle.Text = "0";
+                }
+                    
                 else
+                {
                     serialPort.Write("numcyc 1");
+                    txtMaxCycle.Enabled = true;
+                }
+                    
             }
             catch
             {

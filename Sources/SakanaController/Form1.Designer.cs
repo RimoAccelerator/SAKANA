@@ -56,6 +56,8 @@
             lstRange = new ComboBox();
             label5 = new Label();
             grpMeasurement = new GroupBox();
+            txtMaxCycle = new TextBox();
+            label7 = new Label();
             radioLSV = new RadioButton();
             radioCV = new RadioButton();
             btnSetVolt = new Button();
@@ -113,7 +115,7 @@
             btnStart.Location = new Point(176, 43);
             btnStart.Margin = new Padding(2);
             btnStart.Name = "btnStart";
-            btnStart.Size = new Size(75, 25);
+            btnStart.Size = new Size(70, 25);
             btnStart.TabIndex = 3;
             btnStart.Text = "Start";
             btnStart.UseVisualStyleBackColor = true;
@@ -122,10 +124,10 @@
             // btnStop
             // 
             btnStop.Enabled = false;
-            btnStop.Location = new Point(255, 44);
+            btnStop.Location = new Point(250, 43);
             btnStop.Margin = new Padding(2);
             btnStop.Name = "btnStop";
-            btnStop.Size = new Size(75, 25);
+            btnStop.Size = new Size(70, 25);
             btnStop.TabIndex = 4;
             btnStop.Text = "Stop";
             btnStop.UseVisualStyleBackColor = true;
@@ -187,7 +189,7 @@
             lstCOMs.Location = new Point(56, 19);
             lstCOMs.Margin = new Padding(2);
             lstCOMs.Name = "lstCOMs";
-            lstCOMs.Size = new Size(123, 25);
+            lstCOMs.Size = new Size(96, 25);
             lstCOMs.TabIndex = 9;
             // 
             // label4
@@ -203,10 +205,10 @@
             // btnSave
             // 
             btnSave.Enabled = false;
-            btnSave.Location = new Point(334, 44);
+            btnSave.Location = new Point(324, 43);
             btnSave.Margin = new Padding(2);
             btnSave.Name = "btnSave";
-            btnSave.Size = new Size(75, 25);
+            btnSave.Size = new Size(62, 25);
             btnSave.TabIndex = 11;
             btnSave.Text = "Save";
             btnSave.UseVisualStyleBackColor = true;
@@ -214,7 +216,7 @@
             // 
             // btnRefreshCOM
             // 
-            btnRefreshCOM.Location = new Point(209, 48);
+            btnRefreshCOM.Location = new Point(156, 47);
             btnRefreshCOM.Margin = new Padding(2);
             btnRefreshCOM.Name = "btnRefreshCOM";
             btnRefreshCOM.Size = new Size(75, 25);
@@ -239,7 +241,7 @@
             // 
             grpCalibration.Controls.Add(btnCalibrate);
             grpCalibration.Controls.Add(btnStopCalibration);
-            grpCalibration.Location = new Point(317, 3);
+            grpCalibration.Location = new Point(266, 3);
             grpCalibration.Margin = new Padding(2);
             grpCalibration.Name = "grpCalibration";
             grpCalibration.Padding = new Padding(2);
@@ -250,7 +252,7 @@
             // 
             // btnConnect
             // 
-            btnConnect.Location = new Point(209, 19);
+            btnConnect.Location = new Point(156, 19);
             btnConnect.Margin = new Padding(2);
             btnConnect.Name = "btnConnect";
             btnConnect.Size = new Size(75, 25);
@@ -299,7 +301,7 @@
             lstRange.Location = new Point(56, 48);
             lstRange.Margin = new Padding(2);
             lstRange.Name = "lstRange";
-            lstRange.Size = new Size(123, 25);
+            lstRange.Size = new Size(96, 25);
             lstRange.TabIndex = 17;
             lstRange.SelectedIndexChanged += lstRange_SelectedIndexChanged;
             // 
@@ -315,6 +317,8 @@
             // 
             // grpMeasurement
             // 
+            grpMeasurement.Controls.Add(txtMaxCycle);
+            grpMeasurement.Controls.Add(label7);
             grpMeasurement.Controls.Add(radioLSV);
             grpMeasurement.Controls.Add(radioCV);
             grpMeasurement.Controls.Add(btnStart);
@@ -326,17 +330,36 @@
             grpMeasurement.Controls.Add(txtScanRate);
             grpMeasurement.Controls.Add(btnSave);
             grpMeasurement.Controls.Add(label3);
-            grpMeasurement.Location = new Point(422, 3);
+            grpMeasurement.Location = new Point(371, 3);
             grpMeasurement.Name = "grpMeasurement";
-            grpMeasurement.Size = new Size(533, 78);
+            grpMeasurement.Size = new Size(584, 78);
             grpMeasurement.TabIndex = 19;
             grpMeasurement.TabStop = false;
             grpMeasurement.Text = "Measurement";
             // 
+            // txtMaxCycle
+            // 
+            txtMaxCycle.Location = new Point(446, 20);
+            txtMaxCycle.Margin = new Padding(2);
+            txtMaxCycle.Name = "txtMaxCycle";
+            txtMaxCycle.Size = new Size(66, 23);
+            txtMaxCycle.TabIndex = 15;
+            txtMaxCycle.Text = "1";
+            // 
+            // label7
+            // 
+            label7.AutoSize = true;
+            label7.Location = new Point(516, 24);
+            label7.Margin = new Padding(2, 0, 2, 0);
+            label7.Name = "label7";
+            label7.Size = new Size(44, 17);
+            label7.TabIndex = 14;
+            label7.Text = "Cycles";
+            // 
             // radioLSV
             // 
             radioLSV.AutoSize = true;
-            radioLSV.Location = new Point(425, 43);
+            radioLSV.Location = new Point(399, 45);
             radioLSV.Name = "radioLSV";
             radioLSV.Size = new Size(47, 21);
             radioLSV.TabIndex = 13;
@@ -348,7 +371,7 @@
             // 
             radioCV.AutoSize = true;
             radioCV.Checked = true;
-            radioCV.Location = new Point(425, 19);
+            radioCV.Location = new Point(399, 20);
             radioCV.Name = "radioCV";
             radioCV.Size = new Size(42, 21);
             radioCV.TabIndex = 12;
@@ -384,7 +407,7 @@
             grpConnection.Controls.Add(btnConnect);
             grpConnection.Location = new Point(23, 3);
             grpConnection.Name = "grpConnection";
-            grpConnection.Size = new Size(289, 78);
+            grpConnection.Size = new Size(238, 78);
             grpConnection.TabIndex = 20;
             grpConnection.TabStop = false;
             grpConnection.Text = "Connection";
@@ -499,5 +522,7 @@
         private Button btnSaveIT;
         private RadioButton radioLSV;
         private RadioButton radioCV;
+        private Label label7;
+        private TextBox txtMaxCycle;
     }
 }
