@@ -12,10 +12,12 @@ namespace SakanaController
         private Calibration calibration = new Calibration();
         private Curve curveCV = new Curve();
         private Curve curveIT = new Curve();
+        private CurveDPV curveDPV = new CurveDPV();
         private bool isCalibration = false;
         private bool isMeasurement = false;
         private bool isIT = false;
-        private DateTime startTimeForIT; // 新增变量
+        private bool isDPV = false;
+        private DateTime startTimeForIT;
 
         public SakanaController()
         {
@@ -47,9 +49,17 @@ namespace SakanaController
                 BorderWidth = 5,
                 Color = System.Drawing.ColorTranslator.FromHtml("#ffa241")
             };
+            var dataDPV = new Series
+            {
+                Name = "dataDPV",
+                ChartType = SeriesChartType.Line,
+                BorderWidth = 5,
+                Color = System.Drawing.ColorTranslator.FromHtml("#bbdd41")
+            };
             chartMain.Series.Add(dataCalibration);
             chartMain.Series.Add(dataMeasurement);
             chartMain.Series.Add(dataIT);
+            chartMain.Series.Add(dataDPV);
             chartMain.ChartAreas[0].AxisX.TitleFont = new System.Drawing.Font("Arial", 12, System.Drawing.FontStyle.Bold);
             chartMain.ChartAreas[0].AxisY.TitleFont = new System.Drawing.Font("Arial", 12, System.Drawing.FontStyle.Bold);
         }
@@ -163,8 +173,8 @@ namespace SakanaController
             //a correct command should be like '$a%'
             this.Invoke(new Action(() =>
             {
-                try
-                {
+                //try
+                //{
                     if (isCalibration)
                     {
                         foreach (string response in ExtractBuffer(data))
@@ -172,25 +182,32 @@ namespace SakanaController
                             ProcessReceivedDataForCalibration(response);
                         }
                     }
-                    if (isMeasurement)
+                    else if (isMeasurement)
                     {
                         foreach (string response in ExtractBuffer(data))
                         {
                             ProcessReceivedDataForMeasurement(response);
                         }
                     }
-                    if (isIT)
+                    else if (isIT)
                     {
                         foreach (string response in ExtractBuffer(data))
                         {
                             ProcessReceivedDataForIT(response);
                         }
                     }
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Unable to resolve message from Pico: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                    else if (isDPV)
+                    {
+                        foreach (string response in ExtractBuffer(data))
+                        {
+                            ProcessReceivedDataForDPV(response);
+                        }
+                    }
+                //}
+                //catch (Exception ex)
+                //{
+                //    MessageBox.Show("Unable to resolve message from Pico: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                //}
             }));
         }
 
@@ -236,6 +253,7 @@ namespace SakanaController
                 lblMeasurement.Text = "";
                 btnSave.Enabled = true;
                 btnSetVolt.Enabled = true;
+                btnDPVStart.Enabled = true;
                 return;
             }
             string[] parts = data.Split(' ');
@@ -258,6 +276,28 @@ namespace SakanaController
             double x = (DateTime.Now - startTimeForIT).TotalMilliseconds / 1000;
             var smoothedPoint = curveIT.SmoothDataPoint(x, y);
             chartMain.Series["dataMeasurement"].Points.AddXY(smoothedPoint.x, smoothedPoint.y);
+        }
+
+        private void ProcessReceivedDataForDPV(string data)
+        {
+            data = data.Trim();
+            if (data == "fini")
+            {
+                isDPV = false;
+                lblMeasurement.Text = "";
+                btnDPVSave.Enabled = true;
+                btnDPVStart.Enabled = true;
+                btnDPVStop.Enabled = true;
+                btnStart.Enabled = true;
+                btnSetVolt.Enabled = true;
+                btnCalibrate.Enabled = true;
+                return;
+            }
+            string[] parts = data.Split(' ');
+            double x = double.Parse(parts[0]);
+            double y = double.Parse(parts[1]);
+            var smoothedPoint = curveDPV.SmoothDataPoint(x, y);
+            chartMain.Series["dataDPV"].Points.AddXY(smoothedPoint.x, smoothedPoint.y);
         }
 
         private void doFitting()
@@ -315,7 +355,7 @@ namespace SakanaController
                 !int.TryParse(txtMaxCycle.Text, out int maxCycle)
                 )
             {
-                MessageBox.Show("Input parameters invalid.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Input parameters are invalid.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
             curveCV.StartE = startE;
@@ -327,7 +367,7 @@ namespace SakanaController
                 MessageBox.Show("Voltage out of range. I will not proceed.");
                 return;
             }
-            
+
             string command = $"meas {startE:F3} {endE:F3} {scanRate:F3}";
             try
             {
@@ -338,6 +378,7 @@ namespace SakanaController
                 btnStop.Enabled = true;
                 btnSave.Enabled = false;
                 btnSetVolt.Enabled = false;
+                btnDPVStart.Enabled = false;
                 isMeasurement = true;
                 chartMain.ChartAreas[0].AxisX.Title = "E (V)";
                 chartMain.ChartAreas[0].AxisY.Title = "I (uA)";
@@ -362,6 +403,7 @@ namespace SakanaController
                 btnStop.Enabled = false;
                 btnSave.Enabled = true;
                 btnSetVolt.Enabled = true;
+                btnDPVStart.Enabled = true;
                 lblMeasurement.Text = "";
             }
             catch
@@ -433,6 +475,7 @@ namespace SakanaController
                     btnStopIT.Enabled = true;
                     btnSetVolt.Enabled = false;
                     btnStart.Enabled = false;
+                    btnDPVStart.Enabled = false;
                 }
                 catch
                 {
@@ -464,6 +507,7 @@ namespace SakanaController
                 isIT = false;
                 btnSetVolt.Enabled = true;
                 btnStart.Enabled = true;
+                btnDPVStart.Enabled = true;
             }
             catch
             {
@@ -500,19 +544,19 @@ namespace SakanaController
         {
             try
             {
-                if(radioLSV.Checked)
+                if (radioLSV.Checked)
                 {
                     serialPort.Write("numcyc 0");
                     txtMaxCycle.Enabled = false;
                     txtMaxCycle.Text = "0";
                 }
-                    
+
                 else
                 {
                     serialPort.Write("numcyc 1");
                     txtMaxCycle.Enabled = true;
                 }
-                    
+
             }
             catch
             {
@@ -520,5 +564,101 @@ namespace SakanaController
             }
         }
 
+        private void btnDPVStart_Click(object sender, EventArgs e)
+        {
+            if (!double.TryParse(txtDPVStartE.Text, out double startE) ||
+                !double.TryParse(txtDPVEndE.Text, out double endE) ||
+                !double.TryParse(txtDPVIncre.Text, out double incre) ||
+                !double.TryParse(txtDPVEpul.Text, out double pul) ||
+                !double.TryParse(txtDPVPulwidth.Text, out double pulWidth) ||
+                !double.TryParse(txtDPVSampwith.Text, out double sampWidth) ||
+                !double.TryParse(txtDPVPeriod.Text, out double period))
+            {
+                MessageBox.Show("Input parameters are invalid.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            curveDPV.StartE = startE;
+            curveDPV.EndE = endE;
+            curveDPV.Increment = incre;
+            curveDPV.EPulse = pul;
+            curveDPV.PulseWidth = pulWidth;
+            curveDPV.SamplingWidth = sampWidth;
+            curveDPV.Period = period;
+            if (!checkVolt(curveDPV.StartE) || !checkVolt(curveDPV.EndE))
+            {
+                MessageBox.Show("Voltage out of range. I will not proceed.");
+                return;
+            }
+            //DPV_VSTART, DPV_VEND, DPV_VINCRE, DPV_EPUL, DPV_PULWIDTH, DPV_SAMPWIDTH, DPV_PERIOD = [float(i) for i in buf.split(' ')[1:]]
+            string command = $"dpv {startE:F3} {endE:F3} {incre:F3} {pul:F3} {pulWidth:F3} {sampWidth:F3} {period:F3}";
+            try
+            {
+                serialPort.Write(command);
+                btnStart.Enabled = false;
+                btnDPVStop.Enabled = true;
+                btnDPVSave.Enabled = false;
+                btnSetVolt.Enabled = false;
+                btnDPVStart.Enabled = false;
+                btnCalibrate.Enabled = false;
+                isDPV = true;
+                chartMain.ChartAreas[0].AxisX.Title = "E (V)";
+                chartMain.ChartAreas[0].AxisY.Title = "I (uA)";
+                ClearChart();
+                curveDPV.Clear();
+                lblMeasurement.Text = "Recording";
+                lblSave.Text = "NOT SAVED";
+            }
+            catch
+            {
+                MessageBox.Show("Failed to communicate.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
+        }
+
+        private void btnDPVStop_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                serialPort.Write("stopdpv");
+                isDPV = false;
+                lblMeasurement.Text = "";
+                btnDPVSave.Enabled = true;
+                btnDPVStart.Enabled = true;
+                btnDPVStop.Enabled = true;
+                btnStart.Enabled = true;
+                btnSetVolt.Enabled = true;
+                btnCalibrate.Enabled = true;
+            }
+            catch
+            {
+                MessageBox.Show("Failed to communicate.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void btnDPVSave_Click(object sender, EventArgs e)
+        {
+            using (SaveFileDialog saveFileDialog = new SaveFileDialog())
+            {
+                saveFileDialog.Filter = "Text Files (*.txt)|*.txt|All Files (*.*)|*.*";
+                saveFileDialog.DefaultExt = "txt";
+                saveFileDialog.AddExtension = true;
+                saveFileDialog.Title = "Save Data";
+
+                if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    string filePath = saveFileDialog.FileName;
+                    try
+                    {
+                        curveDPV.Save(filePath);
+                        lblSave.Text = "SAVED";
+                        MessageBox.Show("Data saved successfully.", "Save", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Failed to save data: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
     }
 }

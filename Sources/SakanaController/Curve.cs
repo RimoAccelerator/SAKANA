@@ -8,8 +8,8 @@ namespace SakanaController
 {
     public class Curve
     {
-        private List<(double x, double y)> smoothedDataPoints = new List<(double x, double y)>();
-        private int smoothingWindowSize = 5; // 平滑窗口大小，可以根据需要调整
+        protected List<(double x, double y)> smoothedDataPoints = new List<(double x, double y)>();
+        protected int smoothingWindowSize = 5; // 平滑窗口大小，可以根据需要调整
 
         public double StartE { get; set; }
         public double EndE { get; set; }
@@ -50,7 +50,7 @@ namespace SakanaController
             return (newX, smoothedY);
         }
 
-        public void Save(string filePath)
+        virtual  public void Save(string filePath)
         {
             using (StreamWriter writer = new StreamWriter(filePath))
             {
@@ -68,5 +68,29 @@ namespace SakanaController
 
     }
 
+    public class CurveDPV : Curve
+    {
+        //DPV_VSTART, DPV_VEND, DPV_VINCRE, DPV_EPUL, DPV_PULWIDTH, DPV_SAMPWIDTH, DPV_PERIOD = [float(i) for i in buf.split(' ')[1:]]
+        public double Increment { get; set; }
+        public double EPulse { get; set; }
+        public double PulseWidth { get; set; }
+        public double SamplingWidth { get; set; }
+        public double Period { get; set; }
+        override public void Save(string filePath)
+        {
+            using (StreamWriter writer = new StreamWriter(filePath))
+            {
+                writer.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+                writer.WriteLine("MEASURED BY SAKANA");
+                writer.WriteLine($"StartE = {StartE} V, EndE = {EndE} V, Increment = {Increment} V, Pulse magnitude = {EPulse} V");
+                writer.WriteLine($"Sampling width = {SamplingWidth} s, Pulse Width = {PulseWidth} s, Period = {Period} s");
+                writer.WriteLine();
+                foreach (var point in smoothedDataPoints)
+                {
+                    writer.WriteLine($"{point.x} {point.y}");
+                }
+            }
+        }
+    }
 
 }

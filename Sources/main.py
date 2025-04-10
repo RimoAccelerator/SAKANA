@@ -601,13 +601,25 @@ range_1_switch.value(1)
 range_2_switch = machine.Pin(4, machine.Pin.OUT)
 range_2_switch.value(1)
 
-# Calibration and measurement settings
+# Calibration and CV measurement settings
 IS_CALIBRATION = False
-IS_MEASUREMENT = False
 CAL_SLOPE = -1.080
 CAL_INTERCEPT = 2.711
+IS_CV = False
 IS_I_T = False
 MAX_CYCLE = 0.5 # number of CV cycles * 0.5; 0 for LSV
+
+#DPV-related parameters
+IS_DPV = False
+DPV_VSTART = 0
+DPV_VEND = 1
+DPV_VINCRE = 0.004 #V
+DPV_EPUL = 0.05 #V
+DPV_PULWIDTH = 0.05 #s
+DPV_SAMPWIDTH = 0.017 #s
+DPV_PERIOD = 0.5 #s
+DPV_STARTTIME = 0 #ms
+DPV_NSTEP = 0
 
 # Initialize I2C and sensors
 i2c = I2C(i2c_channel, scl=Pin(scl_pin), sda=Pin(sda_pin))
@@ -625,7 +637,7 @@ num_cycle = 0.0
 ticktime = v_incre / (scan_rate / 1000)
 this_duty = v_start
 N = 8.0
-resistor = 6800
+resistor = 6126
 
 def writeVoltage(v_out):
     if IS_CALIBRATION:
@@ -645,14 +657,15 @@ def ads_read():
     return value * 0.9125 - 0.0115
 
 def handle_uart_commands(buf):
-    global this_duty, num_cycle, count, IS_CALIBRATION, IS_MEASUREMENT, resistor
+    global this_duty, num_cycle, count, IS_CALIBRATION, IS_CV, resistor
     global v_incre, v_start, v_end, scan_rate, N, ticktime
     global CAL_SLOPE, CAL_INTERCEPT, MAX_CYCLE
-    global IS_I_T
+    global IS_I_T, IS_DPV
+    global DPV_PERIOD, DPV_STARTTIME, IS_DPV, DPV_NSTEP, DPV_VSTART, DPV_VEND, DPV_VINCRE, DPV_EPUL, DPV_PULWIDTH, DPV_SAMPWIDTH
     if buf == 'cali':
         print('cali received')
         IS_CALIBRATION = True
-        IS_MEASUREMENT = False
+        IS_CV = False
         IS_I_T = False
         v_start = 1.5
         v_end = 0.5
@@ -670,7 +683,7 @@ def handle_uart_commands(buf):
         IS_CALIBRATION = False
     elif buf == 'stopmeas':
         print('measurement stopped')
-        IS_MEASUREMENT = False
+        IS_CV = False
     elif buf == 'stopit':
         print('i_t stopped')
         IS_I_T = False
@@ -681,18 +694,16 @@ def handle_uart_commands(buf):
         print(buf)
         MAX_CYCLE = float(buf.split(' ')[1]) * 0.5
     elif 'meas' in buf:
-        IS_MEASUREMENT = True
+        IS_CV = True
         IS_CALIBRATION = False
         IS_I_T = False
         v_start, v_end, scan_rate = [float(i) for i in buf.split(' ')[1:]]
         v_incre = - scan_rate * 0.000025 # if v_incre is too small, the scan rate will be significantly lower than expected
         v_start = -v_start
         v_end = -v_end
-
         ticktime = v_incre * 1000 / scan_rate
         if v_start < v_end:
             v_incre = -v_incre #assume that v_incre is always negative. For negative direction, v_incre should be positive
-        
         this_duty = v_start
         num_cycle = 0
         writeVoltage(this_duty)
@@ -700,6 +711,28 @@ def handle_uart_commands(buf):
         i_samp_switch.value(1)
         print(f'measurement started: {v_start} {v_end} {scan_rate}')
         utime.sleep(3)
+    elif 'stopdpv' in buf:
+        IS_DPV = False
+        print('dpv stopped')
+    elif 'dpv' in buf:
+        IS_DPV = True
+        IS_CALIBRATION = False
+        IS_CV = False
+        DPV_VSTART, DPV_VEND, DPV_VINCRE, DPV_EPUL, DPV_PULWIDTH, DPV_SAMPWIDTH, DPV_PERIOD = [float(i) for i in buf.split(' ')[1:]]
+        DPV_VSTART = -DPV_VSTART
+        DPV_VEND = -DPV_VEND
+        DPV_VINCRE = abs(DPV_VINCRE)
+        DPV_EPUL = -DPV_EPUL
+        if DPV_VSTART > DPV_VEND:
+            DPV_VINCRE = -DPV_VINCRE
+        DPV_STARTTIME = utime.ticks_ms()
+        DPV_NSTEP = 0
+        this_duty = DPV_VSTART
+        writeVoltage(this_duty)
+        v_samp_switch.value(0)
+        i_samp_switch.value(1)
+        print(f'dpv started: {DPV_VSTART} {DPV_VEND} {DPV_VINCRE} {DPV_EPUL} {DPV_PULWIDTH} {DPV_SAMPWIDTH} {DPV_PERIOD}')
+        utime.sleep(2)
     elif 'set' in buf:
         _, volt = buf.split(' ')
         print(f'set volt to {volt}')
@@ -731,10 +764,13 @@ def read_i():
     correction_intercept = 0.2836
     return (i - correction_intercept) / correction_slope # fitted calibration function for INA219
 
+DPV_I_BEFORE = []
+DPV_I_AFTER = []
 def main_loop():
-    global this_duty, num_cycle, count, IS_CALIBRATION, IS_MEASUREMENT
+    global this_duty, num_cycle, count, IS_CALIBRATION, IS_CV
     global v_incre, v_start, v_end, scan_rate, N, ticktime
     global CAL_SLOPE, CAL_INTERCEPT
+    global DPV_STARTTIME, IS_DPV, DPV_NSTEP, DPV_I_BEFORE, DPV_I_AFTER
     temp = []
     temp_v = []
     temp_it = []
@@ -746,8 +782,7 @@ def main_loop():
             buf = uart.read().decode().strip()
             handle_uart_commands(buf)
             continue
-
-        if not (IS_CALIBRATION or IS_MEASUREMENT or IS_I_T):
+        if not (IS_CALIBRATION or IS_CV or IS_I_T or IS_DPV):
             utime.sleep(0.001)
             continue
 
@@ -759,17 +794,42 @@ def main_loop():
                 temp_it = []
                 uart.write(f'${i_avg:.4f}%') 
             utime.sleep(0.002)
-
             continue
-        
-        #utime.sleep_us()
+        if IS_DPV:
+            utime.sleep(0.001)
+            elapsed_time = utime.ticks_diff(utime.ticks_ms(), DPV_STARTTIME) / 1000
+            period_num = int(elapsed_time / DPV_PERIOD)
+            period_time = elapsed_time - DPV_PERIOD * period_num
+            #print(f'DPV_PERIOD - DPV_PULWIDTH - DPV_SAMPWIDTH {DPV_PERIOD - DPV_PULWIDTH - DPV_SAMPWIDTH} DPV_PERIOD - DPV_PULWIDTH {DPV_PERIOD - DPV_PULWIDTH}')
+            #print(f'elapsed_time {elapsed_time} period_num {period_num} period_time {period_time}')
+            if period_num > DPV_NSTEP: # at the beginning of each period (>1), set voltage and calculate dI for the previous period
+                DPV_NSTEP = period_num
+                this_duty = DPV_VSTART + DPV_VINCRE * DPV_NSTEP
+                if (DPV_VINCRE > 0 and this_duty > DPV_VEND) or (DPV_VINCRE < 0 and this_duty < DPV_VEND):
+                    print('DPV fini')
+                    uart.write('$fini%')
+                    IS_DPV = False
+                else:
+                    writeVoltage(this_duty)
+                if len(DPV_I_BEFORE) > 0 and len(DPV_I_AFTER) > 0:
+                    i_before_avg = sum(DPV_I_BEFORE) / len(DPV_I_BEFORE)
+                    i_after_avg = sum(DPV_I_AFTER) / len(DPV_I_AFTER)
+                    delta_i = i_after_avg - i_before_avg
+                    print(f'${this_duty:.4f} {delta_i:.4f}%')
+                    uart.write(f'${-this_duty:.4f} {delta_i:.4f}%')
+                    DPV_I_AFTER = []
+                    DPV_I_BEFORE = []
+            if period_time > DPV_PERIOD - DPV_PULWIDTH - DPV_SAMPWIDTH and period_time < DPV_PERIOD - DPV_PULWIDTH: #start I-sampling
+                DPV_I_BEFORE.append(read_i())
+            elif period_time > DPV_PERIOD - DPV_PULWIDTH: #add pulse
+                this_duty = DPV_VSTART + DPV_VINCRE * DPV_NSTEP + DPV_EPUL
+                writeVoltage(this_duty)
+                if period_time > DPV_PERIOD - DPV_SAMPWIDTH: #start I-sampling
+                    DPV_I_AFTER.append(read_i())
+            continue
+            #this_duty += DPV_VINCRE
+
         utime.sleep_us(int(ticktime / N * 1000000))
-        #if IS_CALIBRATION:
-        #    v_samp_switch.value(1)
-        #    i_samp_switch.value(1)
-        #else:
-        #    v_samp_switch.value(0)
-        #    i_samp_switch.value(1)
         if v_start > v_end:
             if this_duty < v_end:
                 this_duty = v_end
@@ -794,7 +854,7 @@ def main_loop():
             utime.sleep(0.1)
             uart.write('$fini%')
             IS_CALIBRATION = False
-            IS_MEASUREMENT = False
+            IS_CV = False
             num_cycle = 0
 
         count += 1
@@ -802,7 +862,7 @@ def main_loop():
         if IS_CALIBRATION:
             v_act = ads_read()
             temp_v.append(v_act)
-        elif IS_MEASUREMENT:
+        elif IS_CV:
             i = read_i()
             temp.append(i)
 
@@ -824,4 +884,3 @@ def main_loop():
 
 if __name__ == "__main__":
     main_loop()
-    
