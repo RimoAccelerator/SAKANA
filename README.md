@@ -1,240 +1,4 @@
-<a href='#English'>English</a>
-
-<a href='#Chinese'>中文</a>
-
-# <a id='English'>SAKANA: A Comprehensive Guide to Building Your First Cyclic Voltammetry Device Within Less than 15 USD </a>
-
-
-
-This is an electrochemical workstation based on the Raspberry Pi Pico. I will show all the software and hardware information.
-
-Directory structure:
-
-- Hardware
-  
-  - Gerber_SAKANA_PCB.zip: PCB manufacturing files
-  
-  - SAKANA_PCB.epro: PCB design files (based on LCEDA)
-  
-  - Shell.zip: Shell model for 3D printing
-
-- Sources
-  
-  - SAKANA_Pico.py: Micropython file for Pico
-  
-  - SakanaController: Source code for the upper computer control software
-
-Given that the vast majority of chemistry workers, like me, have not received systematic electronic engineering education, this article will detail the circuit design process. If you have such a foundation, you can directly skip to **6. Establishing Connections**.
-
-1. **Introduction**
-   
-   Modern electrochemical workstations are designed based on operational amplifiers (op-amps mainly developed in the 1970s. Early literature discussed the design principles of electrochemical workstations, especially circuit stability issues, which require a high level of circuit knowledge. Interested readers can refer to these on their own. In the past decade or so, thanks to the popularization of single-chip microcomputer technology, there have been numerous reports of using single-chip microcomputers represented by Arduino to control and manufacture low-cost electrochemical workstations, to the extent that some schools have incorporated homemade electrochemical workstations into analytical chemistry laboratory courses (https://www.chem.uci.edu/~unicorn/243/labs/W2019Chem243Lab3.pdf).
-   
-   ![](imgs/1.png)
-   
-   The design prototype of this article comes from Meloni's work in 2016 (J. Chem. Educ. 2016, 93, 7, 1320–1322). Meloni reported the design of an electrochemical workstation based on Arduino and provided circuit diagrams and simple source code. However, unfortunately, although Meloni's article presented good results, if you directly copy its design and examine it carefully, you will find that it actually cannot be used. Next, we will demonstrate the principles of this circuit, as well as the design and improvement process of this device.
-
-2. **Principle of Meloni's Prototype**
-   
-   The electrochemical workstation for cyclic voltammetry is based on a three-electrode system. Understanding the three-electrode system is a basic content of instrumental analysis courses, and this article will not elaborate on it. A qualified electrochemical workstation needs to ensure the following points:
-   
-   a. No current flows through the reference electrode (RE);
-   
-   b. It can precisely control the potential of the working electrode (WE) relative to RE, and this potential needs to change at a frequency of up to several Hz;
-   
-   c. It can precisely measure the current passing through WE, with the current magnitude ranging from a few hundredths of a microampere to several hundred microamperes.
-   
-   ![](imgs/2.png)
-   
-   The above is the principle diagram of Meloni's prototype. Next, we analyze the various components of this circuit.
-   
-   a. Voltage Control Circuit
-   
-   Op-amps are the core of modern electrochemical workstations. To understand the voltage control circuit, you must first understand op-amps.
-   
-   ![图片](imgs/3.webp)
-   
-   An op-amp has at least five pins: two power supply pins (positive and negative 6.5 V in the figure), a non-inverting input terminal (+), an inverting input terminal (-), and an output terminal. When the output terminal is connected to the inverting input terminal through a resistor, it forms a negative feedback circuit. For an ideal op-amp, the input terminals can be considered as having infinite resistance, and once negative feedback is formed, the potentials of the two input terminals are equal and no current flows through them. Therefore, for the op-amp on the left in the above figure, the output voltage Vin is always equal to the potential of the non-inverting input terminal, which is called a follower and can isolate the circuit. Next, to solve the output potential Vo of the second op-amp, let the current through R4 be i, then Vo = -iR4, it is known that the op-amp has an amplifying effect on the current, and the amplification factor depends on the feedback resistor. Since the current through the inverting input terminal is 0, it is known that i = Vin / R2 - 5 V / R2, and then Vo can be calculated. By controlling Vin = V1, Vo can be controlled; then Vo is connected to UA3, as long as RE and CE are placed in the electrolytic cell, a negative feedback is formed again, and the voltage on RE is equal to V1.
-   
-   The reason for adopting such a design is that most single-chip microcomputers can only output positive voltage, so a negative voltage bias needs to be applied through R3 to convert it into the voltage range required for cyclic voltammetry. In Meloni's prototype, V1 is supplied by Arduino's PWM. PWM is a technology that generates a square wave by quickly switching the output signal between 0 V and (for Arduino) 5 V. Assuming the duty cycle is a, then the equivalent output voltage is 5 V * a. In order to convert this square wave signal into the direct current signal required for cyclic voltammetry, Meloni's prototype connects a capacitor C1 to the ground between R1 and UA1, thus forming an RC filter circuit. The impedance of the RC filter circuit to the electric signal increases rapidly with the increase of frequency. For signals with a frequency greater than 1/(2pi*RC), the attenuation after passing through the RC filter is greater than 3 dB, which is called the cutoff frequency. The square wave signal can be regarded as a direct current signal superimposed with a series of high-frequency signals after Fourier expansion. Ideally, when the high-frequency signals are fully filtered out, a direct current voltage of 5 V * a can be obtained. Then, after passing through UA1~UA3, it is finally reflected on the potential of RE relative to the ground.
-   
-   Similarly, the C2 on UA2 also forms an RC filter with R4 to filter out the noise brought by the op-amp as much as possible.
-   
-   b. Current Sampling Circuit
-   
-   ![图片](imgs/4.webp)
-   
-   In Meloni's prototype, the current sampling circuit is connected to CE, and a 5 V bias is applied through R5 to the op-amp, and a negative feedback is formed through R6, so that the potential of CE is always 0. The mixed current i is amplified to the potential iR6 (always positive, also because the single-chip microcomputer can only read the positive potential), and after passing through a follower, it enters the ADC pin (Analog to Digital) of Arduino to be read. After reading the above, it is believed that readers have already learned how to calculate the relationship between the current through CE and the ADC reading.
-   
-   Have you found anything wrong?
-   
-   In Meloni's prototype, the positions of CE and WE are drawn in reverse. We do not care about the potential of CE, but we must control the potential difference between WE and RE, so WE must be connected to the current sampling circuit, so that the potential of RE relative to the ground controlled above is equal to the negative value of the potential of WE relative to RE.
-   
-   In summary, now that you have understood the principles of Meloni's prototype, let's begin the implementation.
-   
-   **3. Material List**
-   
-   - 1 * Raspberry Pi Pico
-   
-   - 1 * MCP4725 module
-   
-   - 1 * ADS1115 module
-   
-   - 1 * INA219 chip
-   
-   - 1 * 6 V output DC/DC boost module
-   
-   - 2 * NE5532 or OP297 op-amps
-   
-   - 4 * Relay modules
-   
-   - 1 * CH340 serial port module
-   
-   - Various capacitors and resistors
-     
-     The total cost is around 100RMB and everything is easily accessible on Taobao.
-     
-     ![](imgs/5.png)
-     
-     (No Taobao store sponsored this article)
-   
-   Meloni used Arduino, while this article uses Raspberry Pi Pico. Pico has superior performance and a lower price. It is important to note that Pico's output voltage is 3.3 V (there is also a 5 V pin), so the component values in the circuit based on Arduino's 5 V output need to be recalculated.
-   
-   **4. Implementation and Failure of Meloni's Prototype, and the First Working Circuit**
-   
-   Meloni has provided a complete circuit diagram, and implementing it is a simple matter, so it will not be repeated here. The only thing worth mentioning is that the circuit requires a negative voltage, which cannot be achieved with Pico alone. In this article, a boost power module is used to obtain positive and negative 6 V. The positive voltage is very standard, while the actual negative voltage is about -5.5 V. It is also used to power the op-amps. The output voltage of most op-amps is located between the two power supply pins, usually within a relatively narrow range (this will become a consideration for resistor selection in the future), and choosing a rail-to-rail op-amp can output a range close to the supply voltage.
-   
-   However, it was soon discovered that the foundation of this circuit, that is, the approach of controlling the potential on RE through PWM filtering, is completely unfeasible. On the one hand, even after filtering, the voltage will inevitably fluctuate (ripple phenomenon), and on the other hand, the problem is even more serious:
-   
-   ![图片](imgs/6.webp)
-   
-   The above figure shows the relationship between PWM duty cycle and the voltage obtained after filtering. Ideally, the voltage should vary linearly with the duty cycle, but the reality is completely different, showing a very irregular curve. In this case, controlling the voltage on RE through PWM is completely unreliable!
-   
-   Fortunately, due to the high development of modern electronics industry, many functions in the circuit can be conveniently found in modules, and can be handled like building blocks. In fact, if you want to output an adjustable voltage, there is no need to manually design a power supply circuit. You can use the MCP4725 module shown in (3). It is based on the I2C protocol and connects to Pico, and can be conveniently controlled using existing libraries on Github. After testing, it can accurately and stably output 0 ~ 4.5 V direct current voltage.
-   
-   ![图片](https://mmbiz.qpic.cn/mmbiz_png/nmMUPuaJVp6uGV9dXXdZMmBuotF1vW8X9wFMpWJwhaqBDnWaAB70twe6N2F3mWLsE2iaV2m4iczVkFeqXFfc4yMw/640?wx_fmt=png&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)
-   
-   After using MCP4725, the above circuit was adopted to adapt to Pico's performance. After building it on a breadboard, it can already be used to determine the CV of ferricyanide in salt water:
-   
-   ![图片](imgs/8.webp)
-   
-   **5. Further Improvement: Redesigning Current Sampling**
-   
-   The above circuit can be used as a teaching experiment, but there are still many problems if it is to be used for actual measurement. The biggest problem is noise. In fact, the noise of Pico ADC is a worldwide problem, and many people are troubled by it and cannot find a solution. The following randomly shows a measurement result of ADC facing direct current, and it can be seen that there is a considerable degree of irregular jump. This noise completely comes from Pico's own defects and cannot be filtered out by any external circuit.
-   
-   ![图片](imgs/9.webp)
-   
-   Although the Pico manual gives suggestions to improve ADC, they ultimately did not work, so it is necessary to give up Pico's own ADC and use other modules. Here, two modules are needed: ADS1115 voltage acquisition module and INA219 current acquisition module. Both use the I2C protocol and share 2 wires for communication with MCP4725.
-   
-   It has been proved that the precision of ADS1115 is good, and it can very smoothly measure the connected voltage, and can measure negative pressure not lower than -0.5 V. But the problem is the sampling frequency. ADS1115 can only sample 860 times per second, which cannot meet the demand of CV test to continuously change voltage and sample in a very short time. If it is forcibly used, it will cause the computer to crash. But it can be used for circuit calibration:
-   
-   ![图片](imgs/10.webp)
-   
-   Connect the wiring terminals of RE and CE (this must be done, otherwise negative feedback cannot be formed), and use ADS1115 to measure the voltage at RE, which can calibrate the instrument.
-   
-   ![图片](imgs/11.webp)
-   
-   Note that when the voltage is less than -0.5 V, ADS1115 can no longer work normally, and not only does it not work, but it also interferes with others, causing the voltage on RE to be abnormal. Therefore, ADS1115 can only be used for calibration, and it must be disconnected from RE during CV measurement.
-   
-   The next INA219 will become the core of current sampling. It is different from ADC and directly measures current. INA219 itself is an integrated circuit, which needs to be used with peripheral circuits. The commercially available INA219 modules have already integrated a 0.1 Ohm sampling resistor. It measures the current by measuring the voltage on the sampling resistor, and supports positive and negative currents. The range is adjustable, the minimum range is 400 mA, and the resolution is 12 bits, that is, 400/(2^12)~0.1 mA.
-   
-   The introduction of INA219 allows us to directly eliminate the cumbersome bias voltage design in the current sampling circuit. We simply need to amplify the current passing through WE to an appropriate range for INA219 to sample. With this approach, we obtained very positive preliminary results after some initial trials. The black line represents the original signal, while the red line shows the result after smoothing.
-   
-   <img src="https://mmbiz.qpic.cn/mmbiz_png/nmMUPuaJVp6uGV9dXXdZMmBuotF1vW8XFFvcK1f4IuvfZCFLgYXMZARiaJy3DCwy1ssP6vQmALVvxCXd1KpoiaxA/640?wx_fmt=png&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1" title="" alt="Image" width="400">
-   
-   The following is the final circuit determined for use by SAKANA:
-   
-   ![](imgs/14.png)
-   
-   In this circuit, the current i passing through WE is converted into a voltage signal iR through a transimpedance amplifier, where R can be selected between R4 and R6. After passing through R7, the actual current through INA219 is iR/R7, and measuring this current signal allows us to calculate the current passing through RE. To ensure the measurement accuracy of INA219, iR/R7 should not be too small and should be in the range of a few milliamperes; at the same time, iR should not be too large and must fall within the reliable operating voltage range of the op-amp. Since the CV wave current spans three orders of magnitude, from a few hundredths of a microampere to several hundred microamperes, two relays are used to control the connection of resistors between 6.8 k and 680 k to change the range.
-   
-   OpAmp2 and OpAmp4 have capacitors connected in parallel on their feedback loops, which serve to increase the stability of the op-amps and reduce output noise. With the aid of an oscilloscope, it is clear that C1 plays a crucial role in ensuring the stability of the voltage on RE. Without C1, the voltage on RE would fluctuate by several hundred millivolts, while an appropriately sized C1 can suppress this amplitude to no more than a few tens of millivolts.
-   
-   ![](imgs/15.png)
-   
-   C2 can also significantly suppress noise. After extensive trials, it was determined that C2 should be 100 nF and does not change with the connected resistor. A larger C2 can further smooth the output signal, but it filters out too many rapidly changing signals, leading to waveform distortion and, more seriously, a longer time is required to reach stability when the set output voltage is changed.
-   
-   R7 is a 1 kOhm resistor. In the early stages of design, a smaller resistor was used at R7, in the hope that it would allow the current through INA219 to be as large as possible to reduce the impact of measurement errors. Unfortunately, a smaller R7 led to unexpected large fluctuations in the measurement curve. The following is a typical graph with R7 = 100 Ohm:
-   
-   ![](imgs/16.png)
-   
-   After extensive trials, it was determined that R7 at 1 kOhm would not cause oscillation. To improve the measurement accuracy of INA219 and match the current resistor values, the sampling resistor connected in parallel to it needs to be changed from 0.1 Ohm to 10 Ohm. To achieve this modification, you can either purchase a commercial INA219 module and manually replace the sampling resistor:
-   
-   ![](imgs/22.png)
-   
-   Or you can create your own PCB, and the manufacturing documents have been uploaded in the "Hardware" directory.
-   
-   ![](imgs/21.png)
-   
-   **6. Establishing Connections**
-   
-   On the breadboard, connect Pico with the various modules using the following wiring diagram (only the connections between modules are shown):
-   
-   ![](imgs/19.png)
-   
-   The rest of the connections can be referred to the following schematic diagram:
-   
-   ![](imgs/20.png)
-   
-   Here, four relays are used, two for controlling the range, one for controlling ADS1115 to connect to RE only when voltage calibration is desired (it must be disconnected during CV measurement, otherwise RE will be abnormal when the voltage is negative), and one for controlling the current sampling circuit (it is only connected during CV measurement, otherwise the electrolytic cell will be continuously electrolyzed). A CH340 serial port module is used to achieve communication with the computer. After the connection is completed, the effect is as follows, and the accompanying software can be used for very convenient debugging.
-   
-   ![](imgs/17.png)
-   
-   **7. Controlling Software**
-   
-   ![](imgs/18.png)
-   
-   SakanaController is the control program for Sakana. When using it, first find the correct serial port in the Connection area and connect, then click Start in the Calibration area to perform calibration. Under normal circumstances, it should be a downward diagonal line (the jump at the first point is normal and will not bring any impact). The horizontal coordinate here is the output voltage of MCP4725, and the vertical coordinate is the voltage of RE. The linearity between the two is very good, and you can click Stop at any time to stop the calibration in advance. After the calibration is completed, the correlation coefficient between MCP4725 voltage and V_RE will be obtained, which is used for subsequent CV tests.
-   
-   ![](imgs/26.png)
-   
-   After the calibration is completed, set the test parameters in the Measurement area and click Start to begin the test, and the curve will be updated in real time. The following are some result cases.
-   
-   *KCl with K4Fe(CN)6*
-   
-   ![](imgs/28.png)
-   
-   *Ferrocene in DCM*
-   
-   ![](imgs/27.png)
-   
-   After the test is completed, click Save to save to a plain text file.
-   
-   In addition to CV measurement, the software also has a potentiostat mode. After the calibration is completed, enter the desired voltage in the Potentiostat and click Start, and the instrument will make the potential of WE relative to RE equal to the set value, which can be used for electrolysis experiments. For instruments soldered onto the PCB, **the voltage range can reach ±2.5 V, with an error of no more than 30 mV (typically 10 mV).**
-   
-   **8. Transferring to PCB**
-   
-   Although the circuit built on the breadboard is convenient for debugging, the problem of poor contact is very serious. Just a slight touch can change the performance of the instrument. However, after soldering onto the PCB, a very reliable finished product will be obtained.
-   
-   ![](imgs/23.png)
-   
-   After drawing the schematic and PCB, production and soldering can be carried out.
-   
-   ![](imgs/24.jpeg)
-   
-   ![](imgs/25.png)
-   
-   With this, an electrochemical workstation for cyclic voltammetry is completed.
-   
-   **About**
-   
-   The name of this project is SAKANA, pronounced similar to "Cyclic."
-   
-   Readers are highly encouraged to use the content introduced in this article for their own teaching and research. Those who cite this article must indicate the source. **Those who publish or develop secondary projects based on this project must cite the Github page. Commercial use without permission from the author is prohibited.**
-   
-   *BSJ INSTRUMENT*
-   
-   January 15, 2025
-   
-   ![图片](imgs/logo.png)
-   
-   This project uses the following achievements from Github repositories:
-   
-   [chrisb2/pyb_ina219: This library for MicroPython makes it easy to leverage the complex functionality of the Texas Instruments INA219 sensor to measure voltage, current, and power.](https://github.com/chrisb2/pyb_ina219)
-   
-   [robert-hh/ads1x15: Micropython driver for ADS1115 and ADS1015](https://github.com/robert-hh/ads1x15)
-
-# <a id='Chinese'>SAKANA：年轻人第一台循环伏安的全面制造指南</a>
+# SAKANA：年轻人第一台循环伏安的全面制造指南
 
 这是一款基于树莓派Pico的电化学工作站，其中包含了所有软硬件信息。
 
@@ -250,9 +14,11 @@ Given that the vast majority of chemistry workers, like me, have not received sy
 
 - Sources
   
-  SAKANA_Pico.py：Pico上的Micropython文件
+  main.py：Pico上的Micropython文件
+
+- sources_SakanaController
   
-  SakanaController：上位机控制软件源代码
+  上位机控制软件源代码，Releases中有编译后的可执行文件
 
 鉴于绝大多数化学工作者都像我一样，没有接受过系统的电子工程教育，本文中会详细介绍电路的设计过程。如果你有此类基础，可直接跳转到**6. 建立连接**。
 
@@ -300,7 +66,7 @@ Meloni原型机中，电流采样电路接在CE上，通过R5施加5 V的偏置�
 
 总之，现在你已经理解了Meloni原型机的原理，接下来就开始实现吧。
 
-**3. 材料清单**  
+**3. 材料清单**
 
 - 1 * 树莓派Pico
 
@@ -312,7 +78,7 @@ Meloni原型机中，电流采样电路接在CE上，通过R5施加5 V的偏置�
 
 - 1 * 6 V输出DC/DC升压模块
 
-- 2 * NE5532或OP297运放
+- 2 * OP297运放
 
 - 4 * 继电器模块
 
@@ -321,6 +87,34 @@ Meloni原型机中，电流采样电路接在CE上，通过R5施加5 V的偏置�
 - 若干电容电阻
   
   总成本在100元左右。
+  
+  | 名称               | 数量              | 链接                                                 | 备注      |
+  | ---------------- | --------------- | -------------------------------------------------- | ------- |
+  | 树莓派Pico          | 1               |                                                    |         |
+  | MCP4725模块        | 1               | https://item.taobao.com/item.htm?&id=549632416001  |         |
+  | ADS1115模块        | 1               | https://item.taobao.com/item.htm?&id=631122402654  |         |
+  | INA219芯片         | 1               | https://item.taobao.com/item.htm?id=725297963549   |         |
+  | 6 V输出DC/DC升压模块   | 1               | https://item.taobao.com/item.htm?id=666072862041   |         |
+  | OP297运放          | 2               | https://item.taobao.com/item.htm?id=599390292581   |         |
+  | 继电器模块            | 4（v1.0）或3（v2.0） | https://item.taobao.com/item.htm?&id=628701168992  |         |
+  | CH340串口模块        | 1               | https://detail.tmall.com/item.htm?id=41323941056   |         |
+  | GM12043AKCZ-R7   | 1               | https://item.szlcsc.com/8421183.html               | 仅v2.0需要 |
+  | GM1206AUJZ-R7    | 1               | https://item.szlcsc.com/50919536.html              | 仅v2.0需要 |
+  | 共模扼流圈ACM9070-272 | 1               | https://item.taobao.com/item.htm?id=711722477029   | 仅v2.0需要 |
+  | 电容：10 uF         | 2               |                                                    |         |
+  | 电容：2.2 uF        | 2               |                                                    | 仅v2.0需要 |
+  | 电容：0.1 uF        | 10              |                                                    |         |
+  | 电容：1 uF          | 3               |                                                    |         |
+  | 电容：68 nF         | 1               |                                                    |         |
+  | 电阻：4k7           | 4               |                                                    |         |
+  | 电阻：10k           | 5               |                                                    |         |
+  | 电阻：6k8           | 2               |                                                    |         |
+  | 电阻：68k           | 1               |                                                    | 仅v1.0需要 |
+  | 电阻：680k          | 1               |                                                    |         |
+  | 电阻：1k            | 1               |                                                    |         |
+  | 电阻：15k           | 2               |                                                    | 仅v2.0需要 |
+  | GX16航空插座弯头       | 1               | https://item.taobao.com/item.htm?id=890416759846   | 仅v2.0需要 |
+  | 屏蔽线母头GX16-4芯     | 1               | https://detail.tmall.com/item.htm?&id=691474825406 | 仅v2.0需要 |
   
   ![](imgs/5.png)
   
@@ -370,7 +164,7 @@ INA219的引入可以使得我们直接去掉电流采样电路冗杂的偏置�
 
 <img title="" src="imgs/12.webp" alt="图片" width="400">
 
-以下为SAKANA最终确定使用的电路：
+以下为SAKANA v1.0使用的电路：
 
 ![](imgs/14.png)
 
@@ -442,7 +236,31 @@ SakanaController是针对Sakana的控制程序。在使用时，首先在Connect
 
 ![](imgs/25.png)
 
-至此，一个用于循环伏安的电化学工作站就完成了。
+至此，一个用于循环伏安的电化学工作站的v1.0版本就完成了。
+
+SAKANA v1.0非常便于零基础人士制作，但有一个缺陷：所有的模拟供电都直接通过Pico或DCDC开关电源进行，这会带来非常严重的供电噪声。由于RE电压通过MCP4725输出与-6 V 开电源输出组合得到，这会直接在RE/WE直接引入100 mV左右的噪声，同时还叠加50 Hz工频干扰。这种噪声会导致电解池中很大的充放电电流，并且可能干扰测量得到的电化学行为。为此，我们需要进一步改进。
+
+**9. SAKANA v2.0：进一步改善降低噪声**
+
+为了进一步改善噪声问题，可以使用两个低噪声LDO，将LDO的稳压输出用于后续所有模拟电路的供电。来自共模半导体的GM1204和GM1206价格低廉，且可以在高达MHz的频率下保持极高的纹波抑制。在SAKANA v2.0中，来自DCDC的输出首先经过共模扼流圈L1，然后分别输入到两个LDO中，将+6/-6 V转换为+5/-5 V，用于运放、MCP4725、INA219、ADS1115的供电，并使用-5 V稳压输出与MCP4725输出一起形成RE的最终电位。
+
+此外，由于在CV测试中，MCP4725实际输出的是台阶信号，在输出后加了一级RC滤波，使用Rf（10 kOhm）和C6（0.1 uF）构成时间常数约为1 ms的滤波器，一定程度上让台阶信号平滑化并减少过冲的影响。需要小心的是，此处滤波的时间常数不能太大：虽然CV需要尽可能平滑的三角波，但DPV则需要持续时间在几十个ms的尖锐脉冲信号。因此此处的取值需要权衡CV和DPV的需要。使用这一版电路，用示波器在PCB的RE接线口与GND处测量，噪声可以缩减到5 mV左右。
+
+由于这两个LDO的封装很小，在焊接时需要格外小心，且需要使用热风枪。
+
+![](imgs\2025-11-19-12-07-28-QQ_1763525244600.png)
+
+![](imgs\2025-11-19-12-24-58-QQ_1763526289023.png)
+
+另一个重要的噪声源是伸出PCB的导线从环境中拾取的电磁波干扰，其中又以RE到电极的连接线最为重要。事实上，如果使用示波器对输出波形进行测量，就会很明显地感觉到环境干扰的重要影响：如果使用接线弹簧，噪声只有5 mV左右；而如果使用鳄鱼夹连接PCB与示波器，噪声会飙升到20 mV以上。这是由于任何导线环路在空气中都会时刻拾取空中的电磁波干扰。因此，即使RE/WE的电位在PCB上是准确且稳定的，一旦用普通导线接外界电解池，也会引入额外的噪声。为此，将原先使用3根导线连接电极的方法改成使用航空插头+屏蔽线；屏蔽线采用容易购得的4芯屏蔽线，只使用其中3根线，外层铜皮屏蔽层与金属航空插头连接，再在航空插头母座上用导线接地。屏蔽线另一端，手动焊上3个鳄鱼夹连接电极，要让暴露在屏蔽线外的导线尽可能短。使用这一方法，可以将最终输出的RE/GND电位噪声控制在10 mV以内。
+
+在测试时需要注意，不能将示波器直接连接在RE/WE两端，否则会极大改变输出波形，导致剧烈震荡。为了测量这两者的电位，需要测的是RE/GND电位，也就是示波器一头接RE，另一头接PCB上的某个接地点。
+
+此外，为了适配±5 V的供电，重新设计了各电阻的数值，使得支持的电位范围达到±2.8 V. 用于控制量程的继电器缩减到1个，分别对应百uA/1 uA级别的电流。
+
+以下是SAKANA v2.0的实物照片。下位机固件使用v2.0版本，上位机控制软件完全相同。
+
+![](imgs\2025-11-19-12-29-04-b6af0223a357dc957f24319ba7dc5a2d.jpeg)
 
 **关于**
 
