@@ -87,6 +87,19 @@
             txtDPVStartE = new TextBox();
             label9 = new Label();
             label8 = new Label();
+            tabPage4 = new TabPage();
+            btnResetCorrection = new Button();
+            txtWriteCorretion = new Button();
+            txtInterceptV = new TextBox();
+            label19 = new Label();
+            txtSlopeV = new TextBox();
+            label20 = new Label();
+            label18 = new Label();
+            txtInterceptI = new TextBox();
+            label17 = new Label();
+            txtSlopeI = new TextBox();
+            label16 = new Label();
+            label15 = new Label();
             ((System.ComponentModel.ISupportInitialize)chartMain).BeginInit();
             grpCalibration.SuspendLayout();
             statusStrip.SuspendLayout();
@@ -95,6 +108,7 @@
             tabPage1.SuspendLayout();
             tabPage2.SuspendLayout();
             tabPage3.SuspendLayout();
+            tabPage4.SuspendLayout();
             SuspendLayout();
             // 
             // chartMain
@@ -446,6 +460,7 @@
             tabControl1.Controls.Add(tabPage1);
             tabControl1.Controls.Add(tabPage2);
             tabControl1.Controls.Add(tabPage3);
+            tabControl1.Controls.Add(tabPage4);
             tabControl1.Location = new Point(303, 4);
             tabControl1.Name = "tabControl1";
             tabControl1.SelectedIndex = 0;
@@ -665,6 +680,131 @@
             label8.TabIndex = 0;
             label8.Text = "Start E (V)";
             // 
+            // tabPage4
+            // 
+            tabPage4.Controls.Add(btnResetCorrection);
+            tabPage4.Controls.Add(txtWriteCorretion);
+            tabPage4.Controls.Add(txtInterceptV);
+            tabPage4.Controls.Add(label19);
+            tabPage4.Controls.Add(txtSlopeV);
+            tabPage4.Controls.Add(label20);
+            tabPage4.Controls.Add(label18);
+            tabPage4.Controls.Add(txtInterceptI);
+            tabPage4.Controls.Add(label17);
+            tabPage4.Controls.Add(txtSlopeI);
+            tabPage4.Controls.Add(label16);
+            tabPage4.Controls.Add(label15);
+            tabPage4.Location = new Point(4, 26);
+            tabPage4.Name = "tabPage4";
+            tabPage4.Size = new Size(881, 110);
+            tabPage4.TabIndex = 3;
+            tabPage4.Text = "Advance";
+            tabPage4.UseVisualStyleBackColor = true;
+            // 
+            // btnResetCorrection
+            // 
+            btnResetCorrection.Location = new Point(257, 79);
+            btnResetCorrection.Name = "btnResetCorrection";
+            btnResetCorrection.Size = new Size(75, 23);
+            btnResetCorrection.TabIndex = 11;
+            btnResetCorrection.Text = "Reset";
+            btnResetCorrection.UseVisualStyleBackColor = true;
+            btnResetCorrection.Click += btnResetCorrection_Click;
+            // 
+            // txtWriteCorretion
+            // 
+            txtWriteCorretion.Location = new Point(360, 79);
+            txtWriteCorretion.Name = "txtWriteCorretion";
+            txtWriteCorretion.Size = new Size(75, 23);
+            txtWriteCorretion.TabIndex = 10;
+            txtWriteCorretion.Text = "Write";
+            txtWriteCorretion.UseVisualStyleBackColor = true;
+            txtWriteCorretion.Click += txtWriteCorretion_Click;
+            // 
+            // txtInterceptV
+            // 
+            txtInterceptV.Location = new Point(594, 39);
+            txtInterceptV.Name = "txtInterceptV";
+            txtInterceptV.Size = new Size(48, 23);
+            txtInterceptV.TabIndex = 9;
+            // 
+            // label19
+            // 
+            label19.AutoSize = true;
+            label19.Location = new Point(571, 43);
+            label19.Name = "label19";
+            label19.Size = new Size(17, 17);
+            label19.TabIndex = 8;
+            label19.Text = "+";
+            // 
+            // txtSlopeV
+            // 
+            txtSlopeV.Location = new Point(520, 39);
+            txtSlopeV.Name = "txtSlopeV";
+            txtSlopeV.Size = new Size(43, 23);
+            txtSlopeV.TabIndex = 7;
+            // 
+            // label20
+            // 
+            label20.AutoSize = true;
+            label20.Location = new Point(360, 42);
+            label20.Name = "label20";
+            label20.Size = new Size(162, 17);
+            label20.TabIndex = 6;
+            label20.Text = "V(actual) = V(measured) * ";
+            // 
+            // label18
+            // 
+            label18.AutoSize = true;
+            label18.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 134);
+            label18.Location = new Point(360, 10);
+            label18.Name = "label18";
+            label18.Size = new Size(107, 17);
+            label18.TabIndex = 5;
+            label18.Text = "Correction for V";
+            // 
+            // txtInterceptI
+            // 
+            txtInterceptI.Location = new Point(257, 36);
+            txtInterceptI.Name = "txtInterceptI";
+            txtInterceptI.Size = new Size(48, 23);
+            txtInterceptI.TabIndex = 4;
+            // 
+            // label17
+            // 
+            label17.AutoSize = true;
+            label17.Location = new Point(234, 40);
+            label17.Name = "label17";
+            label17.Size = new Size(17, 17);
+            label17.TabIndex = 3;
+            label17.Text = "+";
+            // 
+            // txtSlopeI
+            // 
+            txtSlopeI.Location = new Point(183, 36);
+            txtSlopeI.Name = "txtSlopeI";
+            txtSlopeI.Size = new Size(43, 23);
+            txtSlopeI.TabIndex = 2;
+            // 
+            // label16
+            // 
+            label16.AutoSize = true;
+            label16.Location = new Point(23, 39);
+            label16.Name = "label16";
+            label16.Size = new Size(154, 17);
+            label16.TabIndex = 1;
+            label16.Text = "I(actual) = I(measured) * ";
+            // 
+            // label15
+            // 
+            label15.AutoSize = true;
+            label15.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 134);
+            label15.Location = new Point(23, 10);
+            label15.Name = "label15";
+            label15.Size = new Size(102, 17);
+            label15.TabIndex = 0;
+            label15.Text = "Correction for I";
+            // 
             // SakanaController
             // 
             AutoScaleDimensions = new SizeF(7F, 17F);
@@ -692,6 +832,8 @@
             tabPage2.PerformLayout();
             tabPage3.ResumeLayout(false);
             tabPage3.PerformLayout();
+            tabPage4.ResumeLayout(false);
+            tabPage4.PerformLayout();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -754,5 +896,18 @@
         private Button btnDPVSave;
         private Button btnDPVStop;
         private Button btnDPVStart;
+        private TabPage tabPage4;
+        private Label label15;
+        private TextBox txtInterceptI;
+        private Label label17;
+        private TextBox txtSlopeI;
+        private Label label16;
+        private Label label18;
+        private Button btnResetCorrection;
+        private Button txtWriteCorretion;
+        private TextBox txtInterceptV;
+        private Label label19;
+        private TextBox txtSlopeV;
+        private Label label20;
     }
 }

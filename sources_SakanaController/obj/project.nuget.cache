@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "98302KwcOks=",
+  "dgSpecHash": "h9AYoFQIS3w=",
   "success": true,
-  "projectFilePath": "D:\\Projects\\pythonScripts\\SakanaController\\SakanaController.csproj",
+  "projectFilePath": "D:\\Engineering\\SAKANA\\SAKANA\\sources_SakanaController\\SakanaController.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Administrator\\.nuget\\packages\\runtime.android-arm.runtime.native.system.io.ports\\9.0.0\\runtime.android-arm.runtime.native.system.io.ports.9.0.0.nupkg.sha512",
     "C:\\Users\\Administrator\\.nuget\\packages\\runtime.android-arm64.runtime.native.system.io.ports\\9.0.0\\runtime.android-arm64.runtime.native.system.io.ports.9.0.0.nupkg.sha512",

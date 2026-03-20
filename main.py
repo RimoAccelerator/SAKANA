@@ -583,6 +583,10 @@ class mcp4725:
 import machine, utime
 from machine import UART, Pin, I2C
 import uasyncio as asyncio
+try:
+    import ujson as json
+except ImportError:
+    import json
 
 # UART and I2C settings
 uart = UART(0, baudrate=115200, tx=Pin(12), rx=Pin(13), bits=8, stop=1)
@@ -598,15 +602,22 @@ v_samp_switch = machine.Pin(1, machine.Pin.OUT)
 i_samp_switch = machine.Pin(2, machine.Pin.OUT)
 range_1_switch = machine.Pin(3, machine.Pin.OUT)
 range_1_switch.value(1)
+range_2_switch = machine.Pin(4, machine.Pin.OUT)
+range_2_switch.value(1)
 
 # Calibration and CV measurement settings
 IS_CALIBRATION = False
 CAL_SLOPE = -1.080
 CAL_INTERCEPT = 2.711
+# read_i()/ads_read() correction parameters (can be loaded from file)
+V_CORRECTION_SLOPE = 0.893
+V_CORRECTION_INTERCEPT = 0.008
+I_CORRECTION_SLOPE = 1.0994
+I_CORRECTION_INTERCEPT = 3.19
+CALIBRATION_FILE = 'calibration.json'
 IS_CV = False
 IS_I_T = False
 MAX_CYCLE = 0.5 # number of CV cycles * 0.5; 0 for LSV
-resistor = 6733
 
 #DPV-related parameters
 IS_DPV = False
@@ -636,6 +647,56 @@ num_cycle = 0.0
 ticktime = v_incre / (scan_rate / 1000)
 this_duty = v_start
 N = 8.0
+resistor = 6126
+
+
+def save_calibration_config():
+    config = {
+        'version': 1,
+        'v': {
+            'slope': V_CORRECTION_SLOPE,
+            'intercept': V_CORRECTION_INTERCEPT,
+        },
+        'i': {
+            'slope': I_CORRECTION_SLOPE,
+            'intercept': I_CORRECTION_INTERCEPT,
+        }
+    }
+    try:
+        with open(CALIBRATION_FILE, 'w') as f:
+            json.dump(config, f)
+        return True
+    except Exception as e:
+        print('save calibration failed:', e)
+        return False
+
+
+def load_calibration_config():
+    global V_CORRECTION_SLOPE, V_CORRECTION_INTERCEPT
+    global I_CORRECTION_SLOPE, I_CORRECTION_INTERCEPT
+    try:
+        with open(CALIBRATION_FILE, 'r') as f:
+            config = json.load(f)
+        v_cfg = config.get('v', {})
+        i_cfg = config.get('i', {})
+        V_CORRECTION_SLOPE = float(v_cfg.get('slope', V_CORRECTION_SLOPE))
+        V_CORRECTION_INTERCEPT = float(v_cfg.get('intercept', V_CORRECTION_INTERCEPT))
+        I_CORRECTION_SLOPE = float(i_cfg.get('slope', I_CORRECTION_SLOPE))
+        I_CORRECTION_INTERCEPT = float(i_cfg.get('intercept', I_CORRECTION_INTERCEPT))
+        print('calibration loaded')
+    except OSError:
+        print('calibration file not found, using defaults')
+    except Exception as e:
+        print('invalid calibration file, using defaults:', e)
+
+
+def print_correction_info():
+    msg = (
+        f'${I_CORRECTION_SLOPE:.4f} {I_CORRECTION_INTERCEPT:.4f} '
+        f'{V_CORRECTION_SLOPE:.4f} {V_CORRECTION_INTERCEPT:.4f}%'
+    )
+    print(msg)
+    uart.write(msg)
 
 def writeVoltage(v_out):
     if IS_CALIBRATION:
@@ -650,13 +711,14 @@ def writeVoltage(v_out):
 
 def ads_read():
     value = ads.raw_to_v(ads.read_rev())
-    #return value
-    return value * 0.8854 + 0.0118 # fitted calibration function
+    return value * V_CORRECTION_SLOPE + V_CORRECTION_INTERCEPT # fitted calibration function
 
 def handle_uart_commands(buf):
     global this_duty, num_cycle, count, IS_CALIBRATION, IS_CV, resistor
     global v_incre, v_start, v_end, scan_rate, N, ticktime
     global CAL_SLOPE, CAL_INTERCEPT, MAX_CYCLE
+    global V_CORRECTION_SLOPE, V_CORRECTION_INTERCEPT
+    global I_CORRECTION_SLOPE, I_CORRECTION_INTERCEPT
     global IS_I_T, IS_DPV
     global DPV_PERIOD, DPV_STARTTIME, IS_DPV, DPV_NSTEP, DPV_VSTART, DPV_VEND, DPV_VINCRE, DPV_EPUL, DPV_PULWIDTH, DPV_SAMPWIDTH
     if buf == 'cali':
@@ -687,6 +749,38 @@ def handle_uart_commands(buf):
     elif 'par ' in buf:
         print(buf)
         CAL_SLOPE, CAL_INTERCEPT = [float(i) for i in buf.split(' ')[1:]]
+    elif buf.startswith('correct_v '):
+        parts = buf.split(' ')
+        if len(parts) == 3:
+            try:
+                V_CORRECTION_SLOPE = float(parts[1])
+                V_CORRECTION_INTERCEPT = float(parts[2])
+                if save_calibration_config():
+                    print(f'correct_v saved: {V_CORRECTION_SLOPE} {V_CORRECTION_INTERCEPT}')
+                else:
+                    print(f'correct_v updated (not saved): {V_CORRECTION_SLOPE} {V_CORRECTION_INTERCEPT}')
+                print_correction_info()
+            except ValueError:
+                print('invalid correct_v numbers, use: correct_v slope intercept')
+        else:
+            print('invalid correct_v, use: correct_v slope intercept')
+    elif buf.startswith('correct_i '):
+        parts = buf.split(' ')
+        if len(parts) == 3:
+            try:
+                I_CORRECTION_SLOPE = float(parts[1])
+                I_CORRECTION_INTERCEPT = float(parts[2])
+                if save_calibration_config():
+                    print(f'correct_i saved: {I_CORRECTION_SLOPE} {I_CORRECTION_INTERCEPT}')
+                else:
+                    print(f'correct_i updated (not saved): {I_CORRECTION_SLOPE} {I_CORRECTION_INTERCEPT}')
+                print_correction_info()
+            except ValueError:
+                print('invalid correct_i numbers, use: correct_i slope intercept')
+        else:
+            print('invalid correct_i, use: correct_i slope intercept')
+    elif buf == 'readcorrection':
+        print_correction_info()
     elif 'numcyc ' in buf:
         print(buf)
         MAX_CYCLE = float(buf.split(' ')[1]) * 0.5
@@ -741,23 +835,23 @@ def handle_uart_commands(buf):
         _, range = buf.split(' ')
         if range == '0': # 100 uA range, use the 6k8 resistor
             range_1_switch.value(1)
-            resistor = 6733
+            range_2_switch.value(1)
+            resistor = 6126
             print('set range to 6k8')
-        #elif range == '1': # 10 uA range, use the 68k resistor
-        #    range_1_switch.value(1)
-        #    range_2_switch.value(0)
-        #    resistor = 61800
-        #    print('set range to 68k')
-        elif range == '2': # 1 uA range, use the 680k resistor
+        elif range == '1': # 10 uA range, use the 68k resistor
+            range_1_switch.value(1)
+            range_2_switch.value(0)
+            resistor = 61800
+            print('set range to 68k')
+        if range == '2': # 1 uA range, use the 680k resistor
             range_1_switch.value(0)
+            range_2_switch.value(0)
             resistor = 680000
             print('set range to 680k')
 
 def read_i():
     i = (ina.current()) / (resistor / 1011.6) * 1000
-    correction_slope = 1.0846
-    correction_intercept = 0.2836
-    return (i - correction_intercept) / correction_slope # fitted calibration function for INA219
+    return (i - I_CORRECTION_INTERCEPT) / I_CORRECTION_SLOPE # fitted calibration function for INA219
 
 DPV_I_BEFORE = []
 DPV_I_AFTER = []
@@ -878,4 +972,5 @@ def main_loop():
             
 
 if __name__ == "__main__":
+    load_calibration_config()
     main_loop()

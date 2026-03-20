@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SakanaController")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f9ad489f5de7a57769b27bb8aac6583ba27782e6")]
 [assembly: System.Reflection.AssemblyProductAttribute("SakanaController")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SakanaController")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

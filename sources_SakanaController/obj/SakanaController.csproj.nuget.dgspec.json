@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Projects\\pythonScripts\\SakanaController\\SakanaController.csproj": {}
+    "D:\\Engineering\\SAKANA\\SAKANA\\sources_SakanaController\\SakanaController.csproj": {}
   },
   "projects": {
-    "D:\\Projects\\pythonScripts\\SakanaController\\SakanaController.csproj": {
+    "D:\\Engineering\\SAKANA\\SAKANA\\sources_SakanaController\\SakanaController.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Projects\\pythonScripts\\SakanaController\\SakanaController.csproj",
+        "projectUniqueName": "D:\\Engineering\\SAKANA\\SAKANA\\sources_SakanaController\\SakanaController.csproj",
         "projectName": "SakanaController",
-        "projectPath": "D:\\Projects\\pythonScripts\\SakanaController\\SakanaController.csproj",
+        "projectPath": "D:\\Engineering\\SAKANA\\SAKANA\\sources_SakanaController\\SakanaController.csproj",
         "packagesPath": "C:\\Users\\Administrator\\.nuget\\packages\\",
-        "outputPath": "D:\\Projects\\pythonScripts\\SakanaController\\obj\\",
+        "outputPath": "D:\\Engineering\\SAKANA\\SAKANA\\sources_SakanaController\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

@@ -100,6 +100,9 @@ namespace SakanaController
                     btnCalibrate.Enabled = true;
                     btnStart.Enabled = true;
                     lblConnection.Text = "Connected to " + selectedPort;
+
+                    // 新增：连接成功后发送读取校正参数指令
+                    serialPort.Write("readcorrection");
                 }
                 catch
                 {
@@ -170,45 +173,56 @@ namespace SakanaController
         {
             string data = ((SerialPort)sender).ReadExisting();
             buffer += data;
-            //a correct command should be like '$a%'
             this.Invoke(new Action(() =>
             {
-                //try
-                //{
+                foreach (string response in ExtractBuffer(data))
+                {
+                    // 新增：优先处理校正参数回复
+                    if (IsCorrectionResponse(response))
+                    {
+                        ProcessCorrectionResponse(response);
+                        continue;
+                    }
                     if (isCalibration)
                     {
-                        foreach (string response in ExtractBuffer(data))
-                        {
-                            ProcessReceivedDataForCalibration(response);
-                        }
+                        ProcessReceivedDataForCalibration(response);
                     }
                     else if (isMeasurement)
                     {
-                        foreach (string response in ExtractBuffer(data))
-                        {
-                            ProcessReceivedDataForMeasurement(response);
-                        }
+                        ProcessReceivedDataForMeasurement(response);
                     }
                     else if (isIT)
                     {
-                        foreach (string response in ExtractBuffer(data))
-                        {
-                            ProcessReceivedDataForIT(response);
-                        }
+                        ProcessReceivedDataForIT(response);
                     }
                     else if (isDPV)
                     {
-                        foreach (string response in ExtractBuffer(data))
-                        {
-                            ProcessReceivedDataForDPV(response);
-                        }
+                        ProcessReceivedDataForDPV(response);
                     }
-                //}
-                //catch (Exception ex)
-                //{
-                //    MessageBox.Show("Unable to resolve message from Pico: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                //}
+                }
             }));
+        }
+
+        private bool IsCorrectionResponse(string response)
+        {
+            var parts = response.Trim().Split(' ');
+            return parts.Length == 4 &&
+                   double.TryParse(parts[0], out _) &&
+                   double.TryParse(parts[1], out _) &&
+                   double.TryParse(parts[2], out _) &&
+                   double.TryParse(parts[3], out _);
+        }
+
+        private void ProcessCorrectionResponse(string response)
+        {
+            var parts = response.Trim().Split(' ');
+            if (parts.Length == 4)
+            {
+                txtSlopeI.Text = parts[0];
+                txtInterceptI.Text = parts[1];
+                txtSlopeV.Text = parts[2];
+                txtInterceptV.Text = parts[3];
+            }
         }
 
         private void ProcessReceivedDataForCalibration(string data)
@@ -658,6 +672,61 @@ namespace SakanaController
                         MessageBox.Show("Failed to save data: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
+            }
+        }
+
+        private void btnResetCorrection_Click(object sender, EventArgs e)
+        {
+            var result = MessageBox.Show(
+                "Dangerous! This will reset all the correction parameters and can be only used for advanced users. After this operation, re-measurement of the parameters must be performed. Continue?",
+                "Warning",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+
+            if (result == DialogResult.Yes)
+            {
+                try
+                {
+                    serialPort.Write("correct_i 1 0"); // correcti slope intercept
+                    Thread.Sleep(10);
+                    serialPort.Write("correct_v 1 0");
+                    txtSlopeI.Text = "1";
+                    txtSlopeV.Text = "1";
+                    txtInterceptI.Text = "1";
+                    txtInterceptV.Text = "1";
+                }
+                catch
+                {
+                    MessageBox.Show("Failed to communicate.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        private void txtWriteCorretion_Click(object sender, EventArgs e)
+        {
+            string slopeIText = txtSlopeI.Text.Trim();
+            string interceptIText = txtInterceptI.Text.Trim();
+            string slopeVText = txtSlopeV.Text.Trim();
+            string interceptVText = txtInterceptV.Text.Trim();
+
+            if (!double.TryParse(slopeIText, out double slopeI) ||
+                !double.TryParse(interceptIText, out double interceptI) ||
+                !double.TryParse(slopeVText, out double slopeV) ||
+                !double.TryParse(interceptVText, out double interceptV))
+            {
+                MessageBox.Show("All correction parameters must be valid numbers.", "Input Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            try
+            {
+                serialPort.Write($"correct_i {slopeI} {interceptI}");
+                Thread.Sleep(10);
+                serialPort.Write($"correct_v {slopeV} {interceptV}");
+            }
+            catch
+            {
+                MessageBox.Show("Failed to communicate.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }
