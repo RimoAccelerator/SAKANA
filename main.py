@@ -650,6 +650,20 @@ N = 8.0
 resistor = 6126
 
 
+def update_ticktime():
+    global ticktime
+    if scan_rate <= 0:
+        ticktime = 0
+    else:
+        ticktime = abs(v_incre) * 1000 / scan_rate
+
+
+def get_substep_delay_us():
+    if N <= 0:
+        return 0
+    return int(ticktime * 1000000 / N)
+
+
 def save_calibration_config():
     config = {
         'version': 1,
@@ -698,15 +712,14 @@ def print_correction_info():
     print(msg)
     uart.write(msg)
 
+dac0 = mcp4725(i2c_channel, address)
+dac0.mcp4725_init(scl_pin, sda_pin)
 def writeVoltage(v_out):
     if IS_CALIBRATION:
         voltage0_out = v_out
     else:
         voltage0_out = (v_out - CAL_INTERCEPT) / CAL_SLOPE
-    
     dac0_value = int(voltage0_out / 4.5 * 4095)
-    dac0 = mcp4725(i2c_channel, address)
-    dac0.mcp4725_init(scl_pin, sda_pin)
     dac0.mcp4725_send(dac0_value)
 
 def ads_read():
@@ -728,10 +741,10 @@ def handle_uart_commands(buf):
         IS_I_T = False
         v_start = 1.5
         v_end = 0.5
-        ticktime = v_incre * 1000 / scan_rate
-        this_duty = v_start
         scan_rate = 200.0
-        v_incre = 0.002
+        v_incre = -0.002
+        update_ticktime()
+        this_duty = v_start
         num_cycle = -0.5
         writeVoltage(this_duty)
         v_samp_switch.value(1)
@@ -789,12 +802,12 @@ def handle_uart_commands(buf):
         IS_CALIBRATION = False
         IS_I_T = False
         v_start, v_end, scan_rate = [float(i) for i in buf.split(' ')[1:]]
-        v_incre = - scan_rate * 0.000025 # if v_incre is too small, the scan rate will be significantly lower than expected
+        v_incre = scan_rate * 0.000025 # if v_incre is too small, the scan rate will be significantly lower than expected
         v_start = -v_start
         v_end = -v_end
-        ticktime = v_incre * 1000 / scan_rate
-        if v_start < v_end:
-            v_incre = -v_incre #assume that v_incre is always negative. For negative direction, v_incre should be positive
+        if v_start > v_end:
+            v_incre = -v_incre
+        update_ticktime()
         this_duty = v_start
         num_cycle = 0
         writeVoltage(this_duty)
@@ -864,21 +877,24 @@ def main_loop():
     temp_v = []
     temp_it = []
     count = 0
+    next_tick_us = utime.ticks_us()
 
     writeVoltage(this_duty)
     while True:
         if uart.any():
             buf = uart.read().decode().strip()
             handle_uart_commands(buf)
+            next_tick_us = utime.ticks_us()
             continue
         if not (IS_CALIBRATION or IS_CV or IS_I_T or IS_DPV):
             utime.sleep(0.001)
+            next_tick_us = utime.ticks_us()
             continue
 
         if IS_I_T:
             i = read_i()
             temp_it.append(i)
-            if len(temp_it) > N:
+            if len(temp_it) >= N:
                 i_avg = sum(temp_it) / N
                 temp_it = []
                 uart.write(f'${i_avg:.4f}%') 
@@ -886,6 +902,7 @@ def main_loop():
             continue
         if IS_DPV:
             utime.sleep(0.001)
+            next_tick_us = utime.ticks_us()
             elapsed_time = utime.ticks_diff(utime.ticks_ms(), DPV_STARTTIME) / 1000
             period_num = int(elapsed_time / DPV_PERIOD)
             period_time = elapsed_time - DPV_PERIOD * period_num
@@ -918,7 +935,14 @@ def main_loop():
             continue
             #this_duty += DPV_VINCRE
 
-        utime.sleep_us(int(ticktime / N * 1000000))
+        substep_delay_us = get_substep_delay_us()
+        if substep_delay_us > 0:
+            next_tick_us = utime.ticks_add(next_tick_us, substep_delay_us)
+            sleep_us = utime.ticks_diff(next_tick_us, utime.ticks_us())
+            if sleep_us > 0:
+                utime.sleep_us(sleep_us)
+            else:
+                next_tick_us = utime.ticks_us()
         if v_start > v_end:
             if this_duty < v_end:
                 this_duty = v_end
@@ -956,12 +980,12 @@ def main_loop():
             temp.append(i)
 
         this_duty += v_incre / N
-        if count > N:
+        if count >= N:
             count = 0
             writeVoltage(this_duty)
             if IS_CALIBRATION:
                 v_avg = sum(temp_v) / N
-                uart.write(f'${this_duty:.4f} {v_avg:.4f}%')
+                uart.write(f'${this_duty - v_incre / N:.4f} {v_avg:.4f}%')
                 #print(f'{this_duty:.4f} {v_avg:.4f}')
             else:
                 i_avg = sum(temp) / N

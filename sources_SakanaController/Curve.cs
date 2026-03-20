@@ -22,6 +22,26 @@ namespace SakanaController
 
         public (double x, double y) SmoothDataPoint(double newX, double newY)
         {
+
+            smoothedDataPoints.Add((newX, newY));
+            if (smoothedDataPoints.Count < smoothingWindowSize)
+                return (newX, newY);  // 缓冲期直接返回
+
+            // 以当前点为中心，取前后各 half 个点
+            int half = smoothingWindowSize / 2;
+            int center = smoothedDataPoints.Count - 1 - half;  // 输出延后 half 个点
+            int start = center - half;
+
+            double smoothedY = 0;
+            for (int i = start; i <= start + smoothingWindowSize - 1; i++)
+                smoothedY += smoothedDataPoints[i].y;
+            smoothedY /= smoothingWindowSize;
+
+            return (smoothedDataPoints[center].x, smoothedY);  // X也取中心点
+        
+            /*
+            smoothedDataPoints.Add((newX, newY));
+            return (newX, newY);
             // 将新数据点添加到历史数据点列表中
             smoothedDataPoints.Add((newX, newY));
             // 如果数据点数量小于平滑窗口大小，直接返回新数据点
@@ -48,6 +68,7 @@ namespace SakanaController
 
             // 返回平滑后的数据点
             return (newX, smoothedY);
+            */
         }
 
         virtual  public void Save(string filePath)

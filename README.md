@@ -1,3 +1,9 @@
+**非常重要提醒：20260320版本进行了重大更新，修正了在扫速控制和曲线显示方面的bug，包括固件和Controller，请务必更新。从旧版本更新过来的用户，请到Advance里，点击Reset，将预置的校正参数清除！**
+
+**VERY Important Notice:** The 20260320 version includes major updates that fix bugs related to scan rate control and curve display. This update applies to both the firmware and the Controller—please make sure to update.
+
+For users upgrading from older versions, go to **Advance**, click **Reset**, and clear the preset calibration parameters.
+
 [中文](#cn) | [English](#en)
 
 <div id="cn"></div>
